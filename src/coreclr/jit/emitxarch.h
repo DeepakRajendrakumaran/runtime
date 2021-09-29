@@ -106,6 +106,8 @@ static bool IsMovInstruction(instruction ins);
 bool IsRedundantMov(
     instruction ins, insFormat fmt, emitAttr size, regNumber dst, regNumber src, bool canIgnoreSideEffects);
 
+bool IsRedundantMov_S_R(instruction ins, insFormat fmt, emitAttr size, regNumber ireg, int varx, int offs);
+
 static bool IsJccInstruction(instruction ins);
 static bool IsJmpInstruction(instruction ins);
 
