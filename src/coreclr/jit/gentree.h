@@ -1813,6 +1813,8 @@ public:
 
     inline GenTree* gtEffectiveVal(bool commaOnly = false);
 
+    GenTree* gtEffectiveAddrVal();
+
     inline GenTree* gtCommaAssignVal();
 
     // Tunnel through any GT_RET_EXPRs

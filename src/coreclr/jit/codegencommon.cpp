@@ -1413,6 +1413,8 @@ AGAIN:
     /* We come back to 'AGAIN' if we have an add of a constant, and we are folding that
        constant, or we have gone through a GT_NOP or GT_COMMA node. We never come back
        here if we find a scaled index.
+       We come back to 'AGAIN' also if we encounter a GT_CAST for which the original
+       is a valid type.
     */
     CLANG_FORMAT_COMMENT_ANCHOR;
 
@@ -1580,6 +1582,21 @@ AGAIN:
             op1 = op1->AsOp()->gtOp2;
             goto AGAIN;
 
+        case GT_CAST:
+        {
+            GenTreeCast* cast     = op1->AsCast();
+            GenTree*     prevOp   = cast->CastOp();
+            var_types    origType = prevOp->TypeGet();
+            unsigned     oprSize  = genTypeSize(origType);
+            if ((varTypeIsIntegral(cast) || varTypeIsIntegral(prevOp)) && oprSize <= EA_PTRSIZE)
+            {
+                op1 = prevOp;
+                goto AGAIN;
+            }
+
+            break;
+        }
+
         default:
             break;
     }
@@ -1657,6 +1674,20 @@ AGAIN:
 
             op2 = op2->AsOp()->gtOp2;
             goto AGAIN;
+
+        case GT_CAST:
+        {
+            GenTreeCast* cast     = op2->AsCast();
+            GenTree*     prevOp   = cast->CastOp();
+            var_types    origType = prevOp->TypeGet();
+            unsigned     oprSize  = genTypeSize(origType);
+            if ((varTypeIsIntegral(cast) || varTypeIsIntegral(prevOp)) && oprSize <= EA_PTRSIZE)
+            {
+                op2 = prevOp;
+                goto AGAIN;
+            }
+            break;
+        }
 
         default:
             break;

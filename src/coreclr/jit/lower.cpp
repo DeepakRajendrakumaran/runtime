@@ -5014,6 +5014,10 @@ bool Lowering::TryCreateAddrMode(GenTree* addr, bool isContainable)
                 unusedStack.Push(unused->AsOp()->gtGetOp1());
                 unused = unused->AsOp()->gtGetOp2();
             }
+            else if (unused->OperIs(GT_CAST))
+            {
+                unused = unused->AsOp()->gtGetOp1();
+            }
             else
             {
                 assert(unused->OperIs(GT_CNS_INT));

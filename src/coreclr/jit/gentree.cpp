@@ -2696,6 +2696,40 @@ unsigned Compiler::gtSetCallArgsOrder(const GenTreeCall::UseList& args, bool lat
     return level;
 }
 
+GenTree* GenTree::gtEffectiveAddrVal()
+{
+    GenTree* effectiveAddrVal = this;
+    for (;;)
+    {
+        assert(!effectiveAddrVal->OperIs(GT_PUTARG_TYPE));
+        if (effectiveAddrVal->gtOper == GT_COMMA)
+        {
+            effectiveAddrVal = effectiveAddrVal->AsOp()->gtGetOp2();
+        }
+        else if ((effectiveAddrVal->gtOper == GT_NOP) && (effectiveAddrVal->AsOp()->gtOp1 != nullptr))
+        {
+            effectiveAddrVal = effectiveAddrVal->AsOp()->gtOp1;
+        }
+        else if ((effectiveAddrVal->gtOper == GT_CAST) && (effectiveAddrVal->AsOp()->gtOp1 != nullptr))
+        {
+            GenTreeCast* cast     = effectiveAddrVal->AsCast();
+            GenTree*     prevOp   = cast->CastOp();
+            var_types    origType = prevOp->TypeGet();
+            unsigned     oprSize  = genTypeSize(origType);
+            if ((varTypeIsIntegral(cast) || varTypeIsIntegral(prevOp)) && oprSize <= EA_PTRSIZE)
+            {
+                effectiveAddrVal = prevOp;
+                continue;
+            }
+            return effectiveAddrVal;
+        }
+        else
+        {
+            return effectiveAddrVal;
+        }
+    }
+}
+
 //-----------------------------------------------------------------------------
 // gtWalkOp: Traverse and mark an address expression
 //
@@ -2748,7 +2782,7 @@ void Compiler::gtWalkOp(GenTree** op1WB, GenTree** op2WB, GenTree* base, bool co
     GenTree* op1 = *op1WB;
     GenTree* op2 = *op2WB;
 
-    op1 = op1->gtEffectiveVal();
+    op1 = op1->gtEffectiveAddrVal();
 
     // Now we look for op1's with non-overflow GT_ADDs [of constants]
     while ((op1->gtOper == GT_ADD) && (!op1->gtOverflow()) && (!constOnly || (op1->AsOp()->gtOp2->IsCnsIntOrI())))
@@ -2778,7 +2812,7 @@ void Compiler::gtWalkOp(GenTree** op1WB, GenTree** op2WB, GenTree* base, bool co
             break;
         }
 
-        op1 = op1->gtEffectiveVal();
+        op1 = op1->gtEffectiveAddrVal();
     }
 
     *op1WB = op1;
@@ -2812,7 +2846,7 @@ GenTree* Compiler::gtWalkOpEffectiveVal(GenTree* op)
 {
     for (;;)
     {
-        op = op->gtEffectiveVal();
+        op = op->gtEffectiveAddrVal();
 
         if ((op->gtOper != GT_ADD) || op->gtOverflow() || !op->AsOp()->gtOp2->IsCnsIntOrI())
         {
