@@ -1687,6 +1687,24 @@ void Lowering::LowerHWIntrinsicCreate(GenTreeHWIntrinsic* node)
         {
             if (comp->compOpportunisticallyDependsOn(InstructionSet_AVX2))
             {
+                if (op1->OperIs(GT_IND))
+                {
+                    // We have the following (where simd is simd16 or simd32):
+                    //          /--*  tmp1    byref
+                    //   tmp2 = *  IND       T
+                    //          /--*  tmp2    T
+                    //   tmp3 = *  HWINTRINSIC simd T Create
+
+                    // We will be constructing the following:   T
+                    //          /--*  tmp1    byref
+                    //   tmp3 = *  HWINTRINSIC   simd32 T BroadcastScalarToVector256
+
+                    tmp1 = op1->gtGetOp1();
+                    BlockRange().Remove(op1);
+                    node->gtOp1           = tmp1;
+                    node->gtHWIntrinsicId = NI_AVX2_BroadcastScalarToVector256;
+                    return;
+                }
                 // We will be constructing the following parts:
                 //          /--*  op1  T
                 //   tmp1 = *  HWINTRINSIC   simd16 T CreateScalarUnsafe
@@ -1759,21 +1777,39 @@ void Lowering::LowerHWIntrinsicCreate(GenTreeHWIntrinsic* node)
             return;
         }
 
-        // We will be constructing the following parts:
-        //          /--*  op1  T
-        //   tmp1 = *  HWINTRINSIC   simd16 T CreateScalarUnsafe
-        //   ...
-
-        // This is roughly the following managed code:
-        //   var tmp1 = Vector128.CreateScalarUnsafe(op1);
-        //   ...
-
-        tmp1 = comp->gtNewSimdHWIntrinsicNode(TYP_SIMD16, op1, NI_Vector128_CreateScalarUnsafe, simdBaseJitType, 16);
-        BlockRange().InsertAfter(op1, tmp1);
-        LowerNode(tmp1);
-
         if ((simdBaseJitType != CORINFO_TYPE_DOUBLE) && comp->compOpportunisticallyDependsOn(InstructionSet_AVX2))
         {
+            if (op1->OperIs(GT_IND))
+            {
+                // We have the following (where simd is simd16 or simd32):
+                //          /--*  tmp1    byref
+                //   tmp2 = *  IND       T
+                //          /--*  tmp2    T
+                //   tmp3 = *  HWINTRINSIC simd T Create
+
+                // We will be constructing the following:   T
+                //          /--*  tmp1    byref
+                //   tmp3 = *  HWINTRINSIC   simd T BroadcastScalarToVector128
+                tmp1 = op1->gtGetOp1();
+                BlockRange().Remove(op1);
+                node->gtOp1           = tmp1;
+                node->gtHWIntrinsicId = NI_AVX2_BroadcastScalarToVector128;
+                return;
+            }
+            // We will be constructing the following parts:
+            //          /--*  op1  T
+            //   tmp1 = *  HWINTRINSIC   simd16 T CreateScalarUnsafe
+            //   ...
+
+            // This is roughly the following managed code:
+            //   var tmp1 = Vector128.CreateScalarUnsafe(op1);
+            //   ...
+
+            tmp1 =
+                comp->gtNewSimdHWIntrinsicNode(TYP_SIMD16, op1, NI_Vector128_CreateScalarUnsafe, simdBaseJitType, 16);
+            BlockRange().InsertAfter(op1, tmp1);
+            LowerNode(tmp1);
+
             // We will be constructing the following parts:
             //   ...
             //           /--*  tmp1 simd16
@@ -1789,6 +1825,18 @@ void Lowering::LowerHWIntrinsicCreate(GenTreeHWIntrinsic* node)
             node->gtHWIntrinsicId = NI_AVX2_BroadcastScalarToVector128;
             return;
         }
+        // We will be constructing the following parts:
+        //          /--*  op1  T
+        //   tmp1 = *  HWINTRINSIC   simd16 T CreateScalarUnsafe
+        //   ...
+
+        // This is roughly the following managed code:
+        //   var tmp1 = Vector128.CreateScalarUnsafe(op1);
+        //   ...
+
+        tmp1 = comp->gtNewSimdHWIntrinsicNode(TYP_SIMD16, op1, NI_Vector128_CreateScalarUnsafe, simdBaseJitType, 16);
+        BlockRange().InsertAfter(op1, tmp1);
+        LowerNode(tmp1);
 
         switch (simdBaseType)
         {
