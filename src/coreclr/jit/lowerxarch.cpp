@@ -5735,6 +5735,10 @@ bool Lowering::IsContainableHWIntrinsicOp(GenTreeHWIntrinsic* containingNode, Ge
                     // The memory form of this already takes a pointer, and cannot be further contained.
                     // The containable form is the one that takes a SIMD value, that may be in memory.
                     supportsGeneralLoads = (node->TypeGet() == TYP_SIMD16);
+                    if (node->gtGetOp1()->OperIs(GT_IND)) {
+                        supportsSIMDScalarLoads = true;
+                        //supportsSIMDScalarLoads = false;
+                    }
                     break;
                 }
 
@@ -5838,6 +5842,7 @@ bool Lowering::IsContainableHWIntrinsicOp(GenTreeHWIntrinsic* containingNode, Ge
 
         case NI_SSE_LoadScalarVector128:
         case NI_SSE2_LoadScalarVector128:
+        case NI_Vector128_CreateScalarUnsafe:
         {
             return supportsSIMDScalarLoads;
         }

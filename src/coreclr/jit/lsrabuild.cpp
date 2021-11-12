@@ -2926,7 +2926,7 @@ void LinearScan::BuildDefsWithKills(GenTree* tree, int dstCount, regMaskTP dstCa
 // Notes:
 //    The node must not be contained, and must have been processed by buildRefPositionsForNode().
 //
-RefPosition* LinearScan::BuildUse(GenTree* operand, regMaskTP candidates, int multiRegIdx)
+RefPosition* LinearScan::BuildUse(GenTree* operand, regMaskTP candidates, int multiRegIdx) // Need this to happen to remove from deflist
 {
     assert(!operand->isContained());
     Interval* interval;
@@ -3075,11 +3075,11 @@ int LinearScan::BuildOperandUses(GenTree* node, regMaskTP candidates)
 #ifdef FEATURE_HW_INTRINSICS
     if (node->OperIsHWIntrinsic())
     {
-        if (node->AsHWIntrinsic()->OperIsMemoryLoad())
+        if (node->AsHWIntrinsic()->OperIsMemoryLoad())// Possible check
         {
             return BuildAddrUses(node->gtGetOp1());
         }
-        BuildUse(node->gtGetOp1(), candidates);
+        BuildOperandUses(node->gtGetOp1(), candidates);
         return 1;
     }
 #endif // FEATURE_HW_INTRINSICS
