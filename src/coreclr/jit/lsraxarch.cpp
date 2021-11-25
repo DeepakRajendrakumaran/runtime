@@ -2134,13 +2134,12 @@ int LinearScan::BuildHWIntrinsic(GenTreeHWIntrinsic* intrinsicTree)
         // Note that the default case for building uses will handle the RMW flag, but if the uses
         // are built in the individual cases, buildUses is set to false, and any RMW handling (delayFree)
         // must be handled within the case.
-        switch (intrinsicId)//
+        switch (intrinsicId)
         {
             case NI_Vector128_CreateScalarUnsafe:
             case NI_Vector128_ToScalar:
             case NI_Vector256_CreateScalarUnsafe:
             case NI_Vector256_ToScalar:
-            case NI_AVX2_BroadcastScalarToVector256:
             {
                 assert(numArgs == 1);
 

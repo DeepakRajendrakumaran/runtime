@@ -453,10 +453,6 @@ void CodeGen::genHWIntrinsic_R_RM(
         {
             GenTree*      addr;
             GenTreeIndir* memIndir = nullptr;
-            if(rmOp->OperIsHWIntrinsic() && !rmOp->AsHWIntrinsic()->OperIsMemoryLoad()) {
-                NamedIntrinsic         intrinsicId = rmOp->AsHWIntrinsic()->gtHWIntrinsicId;
-                rmOp = rmOp->AsHWIntrinsic()->gtGetOp1();
-            }
 
             if (rmOp->isIndir())
             {
