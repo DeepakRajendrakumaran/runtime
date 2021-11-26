@@ -3079,6 +3079,12 @@ int LinearScan::BuildOperandUses(GenTree* node, regMaskTP candidates)
         {
             return BuildAddrUses(node->gtGetOp1());
         }
+#ifdef TARGET_XARCH
+        else if (node->AsHWIntrinsic()->gtHWIntrinsicId == NI_Vector128_CreateScalarUnsafe && node->isContained()) {
+            return BuildOperandUses(node->gtGetOp1(), candidates);// Assuming earlier assumption was that operands of hwintrinsisc are not contained unless memory operations
+        } 
+#endif
+        
         BuildUse(node->gtGetOp1(), candidates);
         return 1;
     }

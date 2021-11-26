@@ -454,6 +454,11 @@ void CodeGen::genHWIntrinsic_R_RM(
             GenTree*      addr;
             GenTreeIndir* memIndir = nullptr;
 
+            while (rmOp->AsHWIntrinsic()->gtHWIntrinsicId == NI_Vector128_CreateScalarUnsafe)// currently only this can be a non memory and contained)
+            {
+                rmOp = rmOp->AsHWIntrinsic()->gtGetOp1();
+            }
+
             if (rmOp->isIndir())
             {
                 memIndir = rmOp->AsIndir();

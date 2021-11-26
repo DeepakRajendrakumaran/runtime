@@ -1604,19 +1604,26 @@ void CodeGen::genConsumeRegs(GenTree* tree)
 #ifdef FEATURE_HW_INTRINSICS
         else if (tree->OperIs(GT_HWINTRINSIC))
         {
-            // Only load/store HW intrinsics can be contained (and the address may also be contained).
-            HWIntrinsicCategory category = HWIntrinsicInfo::lookupCategory(tree->AsHWIntrinsic()->gtHWIntrinsicId);
-            assert((category == HW_Category_MemoryLoad) || (category == HW_Category_MemoryStore));
-            int numArgs = HWIntrinsicInfo::lookupNumArgs(tree->AsHWIntrinsic());
-            genConsumeAddress(tree->gtGetOp1());
-            if (category == HW_Category_MemoryStore)
+            if (tree->AsHWIntrinsic()->gtHWIntrinsicId == NI_Vector128_CreateScalarUnsafe && tree->isContained())// currently only this can be a non memory and contained
             {
-                assert((numArgs == 2) && !tree->gtGetOp2()->isContained());
-                genConsumeReg(tree->gtGetOp2());
+                genConsumeRegs(tree->gtGetOp1());
             }
             else
             {
-                assert(numArgs == 1);
+                // Only load/store HW intrinsics can be contained (and the address may also be contained).
+                HWIntrinsicCategory category = HWIntrinsicInfo::lookupCategory(tree->AsHWIntrinsic()->gtHWIntrinsicId);
+                assert((category == HW_Category_MemoryLoad) || (category == HW_Category_MemoryStore));
+                int numArgs = HWIntrinsicInfo::lookupNumArgs(tree->AsHWIntrinsic());
+                genConsumeAddress(tree->gtGetOp1());
+                if (category == HW_Category_MemoryStore)
+                {
+                    assert((numArgs == 2) && !tree->gtGetOp2()->isContained());
+                    genConsumeReg(tree->gtGetOp2());
+                }
+                else
+                {
+                    assert(numArgs == 1);
+                }
             }
         }
 #endif // FEATURE_HW_INTRINSICS
