@@ -5523,6 +5523,16 @@ bool Lowering::IsContainableHWIntrinsicOp(GenTreeHWIntrinsic* containingNode, Ge
 
     switch (intrinsicId)
     {
+        case NI_Vector128_CreateScalarUnsafe:
+        {
+            bool op1SupportsRegOptional = false;
+            if (IsContainableHWIntrinsicOp(node->AsHWIntrinsic(), node->AsHWIntrinsic()->Op(1),
+                                           &op1SupportsRegOptional))
+            {
+                return supportsGeneralLoads;
+            }
+            return false;
+        }
         case NI_SSE_LoadAlignedVector128:
         case NI_SSE2_LoadAlignedVector128:
         case NI_AVX_LoadAlignedVector256:

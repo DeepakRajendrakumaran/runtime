@@ -2104,6 +2104,8 @@ int LinearScan::BuildHWIntrinsic(GenTreeHWIntrinsic* intrinsicTree)
             case NI_Vector128_ToScalar:
             case NI_Vector256_CreateScalarUnsafe:
             case NI_Vector256_ToScalar:
+            case NI_AVX2_BroadcastScalarToVector128:
+            case NI_AVX2_BroadcastScalarToVector256:
             {
                 assert(numArgs == 1);
 

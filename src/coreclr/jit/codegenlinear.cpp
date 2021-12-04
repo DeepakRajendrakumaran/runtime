@@ -1622,23 +1622,33 @@ void CodeGen::genConsumeRegs(GenTree* tree)
 #ifdef FEATURE_HW_INTRINSICS
         else if (tree->OperIs(GT_HWINTRINSIC))
         {
-            // Only load/store HW intrinsics can be contained (and the address may also be contained).
-            HWIntrinsicCategory category = HWIntrinsicInfo::lookupCategory(tree->AsHWIntrinsic()->GetHWIntrinsicId());
-            assert((category == HW_Category_MemoryLoad) || (category == HW_Category_MemoryStore));
             size_t numArgs = tree->AsHWIntrinsic()->GetOperandCount();
-            genConsumeAddress(tree->AsHWIntrinsic()->Op(1));
-            if (category == HW_Category_MemoryStore)
+            if (tree->isContainableNonMemoryHWIntrinsic() && tree->isContained())
             {
-                assert(numArgs == 2);
-
-                GenTree* op2 = tree->AsHWIntrinsic()->Op(2);
-                assert(op2->isContained());
-
-                genConsumeReg(op2);
+                // Currently only CreateScalarUnsafe falls under this category.
+                assert(numArgs == 1);
+                genConsumeRegs(tree->AsHWIntrinsic()->Op(1));
             }
             else
             {
-                assert(numArgs == 1);
+                // Only load/store HW intrinsics can be contained (and the address may also be contained).
+                HWIntrinsicCategory category =
+                    HWIntrinsicInfo::lookupCategory(tree->AsHWIntrinsic()->GetHWIntrinsicId());
+                assert((category == HW_Category_MemoryLoad) || (category == HW_Category_MemoryStore));
+                genConsumeAddress(tree->AsHWIntrinsic()->Op(1));
+                if (category == HW_Category_MemoryStore)
+                {
+                    assert(numArgs == 2);
+
+                    GenTree* op2 = tree->AsHWIntrinsic()->Op(2);
+                    assert(op2->isContained());
+
+                    genConsumeReg(op2);
+                }
+                else
+                {
+                    assert(numArgs == 1);
+                }
             }
         }
 #endif // FEATURE_HW_INTRINSICS

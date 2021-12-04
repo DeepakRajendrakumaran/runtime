@@ -18072,6 +18072,29 @@ bool GenTree::isCommutativeHWIntrinsic() const
 #endif // TARGET_XARCH
 }
 
+bool GenTree::isContainableNonMemoryHWIntrinsic() const
+{
+    assert(gtOper == GT_HWINTRINSIC);
+
+#ifdef TARGET_XARCH
+    switch (AsHWIntrinsic()->GetHWIntrinsicId())
+    {
+        case NI_Vector128_CreateScalarUnsafe:
+        case NI_Vector256_CreateScalarUnsafe:
+        {
+            return true;
+        }
+
+        default:
+        {
+            return false;
+        }
+    }
+#else
+    return false;
+#endif // TARGET_XARCH
+}
+
 bool GenTree::isContainableHWIntrinsic() const
 {
     assert(gtOper == GT_HWINTRINSIC);
@@ -18089,6 +18112,8 @@ bool GenTree::isContainableHWIntrinsic() const
         case NI_AVX_LoadVector256:
         case NI_AVX_ExtractVector128:
         case NI_AVX2_ExtractVector128:
+        case NI_Vector128_CreateScalarUnsafe:
+        case NI_Vector256_CreateScalarUnsafe:
         {
             return true;
         }

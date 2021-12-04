@@ -3090,6 +3090,13 @@ int LinearScan::BuildOperandUses(GenTree* node, regMaskTP candidates)
         {
             return BuildAddrUses(node->AsHWIntrinsic()->Op(1));
         }
+#ifdef TARGET_XARCH
+        else if (node->isContainableNonMemoryHWIntrinsic() && node->isContained())
+        {
+            // Currently only CreateScalarUnsafe falls under this category.
+            return BuildOperandUses(node->AsHWIntrinsic()->Op(1), candidates);
+        }
+#endif
 
         assert(node->AsHWIntrinsic()->GetOperandCount() == 1);
         BuildUse(node->AsHWIntrinsic()->Op(1), candidates);

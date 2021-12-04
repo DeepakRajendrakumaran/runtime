@@ -444,6 +444,13 @@ void CodeGen::genHWIntrinsic_R_RM(
         unsigned varNum = BAD_VAR_NUM;
         unsigned offset = (unsigned)-1;
 
+        if (rmOp->OperIsHWIntrinsic() && rmOp->isContainableNonMemoryHWIntrinsic())
+        {
+            // Currently only CreateScalarUnsafe falls under this category.
+            size_t numArgs = rmOp->AsHWIntrinsic()->GetOperandCount();
+            assert(numArgs == 1);
+            rmOp = rmOp->AsHWIntrinsic()->Op(1);
+        }
         if (rmOp->isUsedFromSpillTemp())
         {
             assert(rmOp->IsRegOptional());
@@ -657,6 +664,13 @@ void CodeGen::genHWIntrinsic_R_R_RM_I(GenTreeHWIntrinsic* node, instruction ins,
         TempDsc* tmpDsc = nullptr;
         unsigned varNum = BAD_VAR_NUM;
         unsigned offset = (unsigned)-1;
+        if (op2->OperIsHWIntrinsic() && op2->isContainableNonMemoryHWIntrinsic())
+        {
+            // Currently only CreateScalarUnsafe falls under this category.
+            size_t numArgs = op2->AsHWIntrinsic()->GetOperandCount();
+            assert(numArgs == 1);
+            op2 = op2->AsHWIntrinsic()->Op(1);
+        }
 
         if (op2->isUsedFromSpillTemp())
         {
@@ -932,6 +946,14 @@ void CodeGen::genHWIntrinsic_R_R_R_RM(
         TempDsc* tmpDsc = nullptr;
         unsigned varNum = BAD_VAR_NUM;
         unsigned offset = (unsigned)-1;
+
+        if (op3->OperIsHWIntrinsic() && op3->isContainableNonMemoryHWIntrinsic())
+        {
+            // Currently only CreateScalarUnsafe falls under this category.
+            size_t numArgs = op3->AsHWIntrinsic()->GetOperandCount();
+            assert(numArgs == 1);
+            op3 = op3->AsHWIntrinsic()->Op(1);
+        }
 
         if (op3->isUsedFromSpillTemp())
         {
