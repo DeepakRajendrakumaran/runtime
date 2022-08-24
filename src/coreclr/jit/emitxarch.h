@@ -65,11 +65,14 @@ BYTE* emitOutputRRR(BYTE* dst, instrDesc* id);
 
 BYTE* emitOutputLJ(insGroup* ig, BYTE* dst, instrDesc* id);
 
+unsigned emitOutputSIMDPrefixIfNeeded(instruction ins, BYTE* dst, code_t& code);
 unsigned emitOutputRexOrVexPrefixIfNeeded(instruction ins, BYTE* dst, code_t& code);
 unsigned emitGetRexPrefixSize(instruction ins);
 unsigned emitGetVexPrefixSize(instruction ins, emitAttr attr);
+unsigned emitGetEvexPrefixSize(instrDesc* id);
 unsigned emitGetPrefixSize(code_t code, bool includeRexPrefixSize);
 unsigned emitGetAdjustedSize(instruction ins, emitAttr attr, code_t code);
+unsigned emitGetAdjustedSizeSIMD(instrDesc* id, code_t code);
 
 unsigned insEncodeReg012(instruction ins, regNumber reg, emitAttr size, code_t* code);
 unsigned insEncodeReg345(instruction ins, regNumber reg, emitAttr size, code_t* code);
@@ -86,7 +89,9 @@ unsigned insSSval(unsigned scale);
 
 static bool IsSSEInstruction(instruction ins);
 static bool IsSSEOrAVXInstruction(instruction ins);
+static bool IsSSEOrAVXorAVX512Instruction(instruction ins);
 static bool IsAVXOnlyInstruction(instruction ins);
+static bool IsAVX512OnlyInstruction(instruction ins);
 static bool IsFMAInstruction(instruction ins);
 static bool IsAVXVNNIInstruction(instruction ins);
 static bool IsBMIInstruction(instruction ins);
@@ -94,6 +99,9 @@ static bool IsBMIInstruction(instruction ins);
 static regNumber getBmiRegNumber(instruction ins);
 static regNumber getSseShiftRegNumber(instruction ins);
 bool IsAVXInstruction(instruction ins) const;
+bool IsAVX512Instruction(instruction ins) const;
+bool IsSIMDInstruction(instruction ins) const;
+
 code_t insEncodeMIreg(instruction ins, regNumber reg, emitAttr size, code_t code);
 
 code_t AddRexWPrefix(instruction ins, code_t code);
@@ -135,7 +143,7 @@ bool hasRexPrefix(code_t code)
 #define VEX_PREFIX_CODE_3BYTE 0xC4000000000000ULL
 
 bool TakesVexPrefix(instruction ins) const;
-static bool TakesRexWPrefix(instruction ins, emitAttr attr);
+bool TakesRexWPrefix(instruction ins, emitAttr attr);
 
 // Returns true if the instruction encoding already contains VEX prefix
 bool hasVexPrefix(code_t code)
@@ -160,6 +168,359 @@ code_t AddVexPrefixIfNeededAndNotPresent(instruction ins, code_t code, emitAttr 
     return code;
 }
 
+bool migratedEvexInstFormats(instrDesc* id) const
+{
+    switch (id->idInsFmt())
+    {
+        case IF_RWR_RRD_RRD:
+        case IF_RWR_RRD_RRD_CNS:
+        case IF_RWR_RRD_RRD_RRD:
+        {
+            return true;
+        }
+        default:
+            return false;
+    }
+}
+
+void checkMigratedIns(instrDesc* id)
+{
+    
+    instruction ins = id->idIns();
+    switch (ins)
+    {
+        case INS_xorps:
+        case INS_pshufb:
+        case INS_addsd:
+        case INS_mulsd:
+        case INS_packuswb:
+        {
+            return;
+        }
+        default:
+        {
+            emitDispIns(id, true, false, false);
+            // assert(0);
+        }
+    }
+}
+
+bool IsWEvexOpcodeExtension(instruction ins)
+{
+    switch (ins)
+    {
+        case INS_addpd:
+        case INS_addsd:
+        case INS_movsd:
+        case INS_mulsd:
+        case INS_mulpd:
+        case INS_movntpd:
+        case INS_movlpd:
+        case INS_movhpd:
+        case INS_movapd:
+        case INS_movupd:
+        case INS_shufpd:
+        case INS_subsd:
+        case INS_subpd:
+        case INS_minsd:
+        case INS_minpd:
+        case INS_divsd:
+        case INS_divpd:
+        case INS_maxsd:
+        case INS_maxpd:
+        case INS_xorpd:
+        case INS_andpd:
+        case INS_sqrtsd:
+        case INS_sqrtpd:
+        case INS_andnpd:
+        case INS_orpd:
+        case INS_cvtpd2ps:
+        case INS_cvtsd2ss:
+        case INS_cvtpd2dq:
+        case INS_cvttpd2dq:
+        case INS_paddq:
+        case INS_psubq:
+        case INS_pmuludq:
+        case INS_psllq:
+        case INS_psrlq:
+        case INS_punpckhqdq:
+        case INS_punpcklqdq:
+        case INS_unpckhpd:
+        case INS_pmuldq:
+        case INS_movddup:
+        case INS_pinsrq:
+        case INS_pextrq:
+        case INS_vpbroadcastq:
+        case INS_vpermq:
+        case INS_vpsrlvq:
+        case INS_vpsllvq:
+        case INS_vpermilpd:
+        case INS_vpermpd:
+        case INS_vpgatherdq:
+        case INS_vpgatherqq:
+        case INS_vgatherdpd:
+        case INS_vgatherqpd:
+        case INS_vfmadd132pd:
+        case INS_vfmadd213pd:
+        case INS_vfmadd231pd:
+        case INS_vfmadd132sd:
+        case INS_vfmadd213sd:
+        case INS_vfmadd231sd:
+        case INS_vfmaddsub132pd:
+        case INS_vfmaddsub213pd:
+        case INS_vfmaddsub231pd:
+        case INS_vfmsubadd132pd:
+        case INS_vfmsubadd213pd:
+        case INS_vfmsubadd231pd:
+        case INS_vfmsub132pd:
+        case INS_vfmsub213pd:
+        case INS_vfmsub231pd:
+        case INS_vfmsub132sd:
+        case INS_vfmsub213sd:
+        case INS_vfmsub231sd:
+        case INS_vfnmadd132pd:
+        case INS_vfnmadd213pd:
+        case INS_vfnmadd231pd:
+        case INS_vfnmadd132sd:
+        case INS_vfnmadd213sd:
+        case INS_vfnmadd231sd:
+        case INS_vfnmsub132pd:
+        case INS_vfnmsub213pd:
+        case INS_vfnmsub231pd:
+        case INS_vfnmsub132sd:
+        case INS_vfnmsub213sd:
+        case INS_vfnmsub231sd:
+        case INS_unpcklpd:
+        // case INS_permilpdvar:
+        {
+            return true; // W1
+        }
+        case INS_punpckldq:
+        case INS_movntdq:
+        case INS_movntps:
+        case INS_movlps:
+        case INS_movhps:
+        case INS_movss:
+        case INS_movaps:
+        case INS_movups:
+        case INS_movhlps:
+        case INS_movlhps:
+        case INS_unpckhps:
+        case INS_unpcklps:
+        case INS_shufps:
+        case INS_punpckhdq:
+        case INS_addps:
+        case INS_addss:
+        case INS_mulss:
+        case INS_mulps:
+        case INS_subss:
+        case INS_subps:
+        case INS_minss:
+        case INS_minps:
+        case INS_divss:
+        case INS_divps:
+        case INS_maxss:
+        case INS_maxps:
+        case INS_xorps:
+        case INS_andps:
+        case INS_sqrtss:
+        case INS_sqrtps:
+        case INS_andnps:
+        case INS_orps:
+        case INS_cvtss2sd:
+        case INS_cvtdq2ps:
+        case INS_cvtps2dq:
+        case INS_cvttps2dq:
+        case INS_cvtdq2pd:
+        case INS_paddd:
+        case INS_psubd:
+        case INS_pslld:
+        case INS_psrld:
+        case INS_psrad:
+        case INS_pshufd:
+        case INS_packssdw:
+        case INS_insertps:
+        case INS_pmulld:
+        case INS_pabsd:
+        case INS_pminsd:
+        case INS_pminud:
+        case INS_pmaxud:
+        case INS_pmovsxdq:
+        case INS_pmovzxdq:
+        case INS_packusdw:
+        case INS_movntdqa:
+        case INS_movsldup:
+        case INS_movshdup:
+        case INS_pinsrd:
+        case INS_pextrd:
+        case INS_vbroadcastss:
+        case INS_vbroadcastsd:
+        case INS_vpbroadcastb:
+        case INS_vpbroadcastw:
+        case INS_vpbroadcastd:
+        case INS_vpsravd:
+        case INS_vpsllvd:
+        case INS_vpermilps:
+        case INS_vpermd:
+        case INS_vpermps:
+        case INS_vpgatherdd:
+        case INS_vpgatherqd:
+        case INS_vgatherdps:
+        case INS_vgatherqps:
+        case INS_vfmadd132ps:
+        case INS_vfmadd213ps:
+        case INS_vfmadd231ps:
+        case INS_vfmadd132ss:
+        case INS_vfmadd213ss:
+        case INS_vfmadd231ss:
+        case INS_vfmaddsub132ps:
+        case INS_vfmaddsub213ps:
+        case INS_vfmaddsub231ps:
+        case INS_vfmsubadd132ps:
+        case INS_vfmsubadd213ps:
+        case INS_vfmsubadd231ps:
+        case INS_vfmsub132ps:
+        case INS_vfmsub213ps:
+        case INS_vfmsub231ps:
+        case INS_vfmsub132ss:
+        case INS_vfmsub213ss:
+        case INS_vfmsub231ss:
+        case INS_vfnmadd132ps:
+        case INS_vfnmadd213ps:
+        case INS_vfnmadd231ps:
+        case INS_vfnmadd132ss:
+        case INS_vfnmadd213ss:
+        case INS_vfnmadd231ss:
+        case INS_vfnmsub132ps:
+        case INS_vfnmsub213ps:
+        case INS_vfnmsub231ps:
+        case INS_vfnmsub132ss:
+        case INS_vfnmsub213ss:
+        case INS_vfnmsub231ss:
+        case INS_vpdpbusd:
+        case INS_vpdpwssd:
+        case INS_vpdpbusds:
+        case INS_vpdpwssds:
+        // case INS_permilpsvar:
+        {
+            return false; // W0
+        }
+        default:
+        {
+            return false; // WIG
+        }
+    }
+}
+
+bool CannotBeEvexEncoded(instruction ins) const
+{
+    switch (ins)
+    {
+        case INS_pmovmskb:
+        case INS_movmskpd:
+        case INS_movmskps:
+        case INS_pcmpgtb:
+        case INS_pcmpgtd:
+        case INS_pcmpgtw:
+        case INS_pcmpgtq:
+        case INS_pcmpeqb:
+        case INS_pcmpeqd:
+        case INS_pcmpeqq:
+        case INS_pcmpeqw:
+        case INS_por:
+        case INS_pxor:
+        case INS_dppd:
+        case INS_dpps:
+        case INS_movdqa:
+        case INS_movdqu:
+        case INS_maskmovdqu:
+        case INS_haddps:
+        case INS_haddpd:
+        case INS_hsubps:
+        case INS_hsubpd:
+        case INS_addsubps:
+        case INS_addsubpd:
+        case INS_rcpps:
+        case INS_rcpss:
+        case INS_rsqrtps:
+        case INS_rsqrtss:
+        case INS_pand:
+        case INS_pandn:
+        case INS_psignb:
+        case INS_psignd:
+        case INS_psignw:
+        case INS_roundps:
+        case INS_roundss:
+        case INS_roundpd:
+        case INS_roundsd:
+        case INS_blendps:
+        case INS_blendpd:
+        case INS_blendvps:
+        case INS_blendvpd:
+        case INS_pblendw:
+        case INS_pblendvb:
+        case INS_phaddw:
+        case INS_phsubw:
+        case INS_phsubd:
+        case INS_phaddsw:
+        case INS_phsubsw:
+        case INS_lddqu:
+        case INS_phminposuw:
+        case INS_mpsadbw:
+        case INS_pclmulqdq:
+        case INS_aesdec:
+        case INS_aesdeclast:
+        case INS_aesenc:
+        case INS_aesenclast:
+        case INS_aesimc:
+        case INS_aeskeygenassist:
+        case INS_vextractf128:
+        case INS_vextracti128:
+        case INS_vinsertf128:
+        case INS_vinserti128:
+        case INS_vzeroupper:
+        case INS_vperm2i128:
+        case INS_vpblendd:
+        case INS_vblendvps:
+        case INS_vblendvpd:
+        case INS_vpblendvb:
+        case INS_vtestps:
+        case INS_vtestpd:
+        case INS_vperm2f128:
+        case INS_vbroadcastf128:
+        case INS_vbroadcasti128:
+        case INS_vmaskmovps:
+        case INS_vmaskmovpd:
+        case INS_vpmaskmovd:
+        case INS_vpmaskmovq:
+        case INS_andn:
+        case INS_blsi:
+        case INS_blsmsk:
+        case INS_blsr:
+        case INS_bextr:
+        case INS_rorx:
+        case INS_pdep:
+        case INS_pext:
+        case INS_bzhi:
+        case INS_mulx:
+        case INS_cmpps:
+        case INS_cmpss:
+        case INS_cmppd:
+        case INS_cmpsd:
+        case INS_phaddd:
+#ifdef TARGET_AMD64
+        case INS_shlx:
+        case INS_sarx:
+        case INS_shrx:
+#endif
+        {
+            return true;
+        }
+        default:
+            return false;
+    }
+}
+
 bool useVEXEncodings;
 bool UseVEXEncoding() const
 {
@@ -168,6 +529,53 @@ bool UseVEXEncoding() const
 void SetUseVEXEncoding(bool value)
 {
     useVEXEncodings = value;
+}
+
+bool useEVEXEncodings;
+bool UseEVEXEncoding() const
+{
+    return useEVEXEncodings;
+}
+void SetUseEVEXEncoding(bool value)
+{
+    useEVEXEncodings = value;
+}
+
+
+// 4-byte EVEX prefix starts with byte 0x62
+#define EVEX_PREFIX_MASK 0xFF00000000000000ULL
+#define EVEX_PREFIX_CODE 0x6200000000000000ULL
+
+bool TakesEvexPrefix(instruction ins) const;
+
+// Returns true if the instruction encoding already contains EVEX prefix
+bool hasEvexPrefix(code_t code)
+{
+    return (code & EVEX_PREFIX_MASK) == EVEX_PREFIX_CODE;
+}
+code_t AddEvexPrefix(instruction ins, code_t code, emitAttr attr);
+code_t AddSIMDPrefixIfNeeded(instruction ins, code_t code, emitAttr size)
+{
+    if(TakesEvexPrefix(ins))
+    {
+        code = AddEvexPrefix(ins, code, size);
+    }
+    else if(TakesVexPrefix(ins))
+    {
+        code = AddVexPrefix(ins, code, size);
+    }
+    return code;
+}
+
+bool hasSIMDPrefix(code_t code)
+{
+    return (hasVexPrefix(code) || hasEvexPrefix(code));
+}
+
+// Temporary check to use when adding EVEX codepaths
+bool codeEvexMigrationCheck(code_t code)
+{
+    return hasEvexPrefix(code);
 }
 
 bool containsAVXInstruction = false;
@@ -191,7 +599,9 @@ void SetContains256bitAVX(bool value)
 }
 
 bool IsDstDstSrcAVXInstruction(instruction ins);
+bool IsDstDstSrcSIMDInstruction(instruction ins);
 bool IsDstSrcSrcAVXInstruction(instruction ins);
+bool IsDstSrcSrcSIMDInstruction(instruction ins);
 bool HasRegularWideForm(instruction ins);
 bool HasRegularWideImmediateForm(instruction ins);
 static bool DoesWriteZeroFlag(instruction ins);
@@ -202,6 +612,10 @@ bool IsFlagsAlwaysModified(instrDesc* id);
 bool IsThreeOperandAVXInstruction(instruction ins)
 {
     return (IsDstDstSrcAVXInstruction(ins) || IsDstSrcSrcAVXInstruction(ins));
+}
+bool IsThreeOperandSIMDInstruction(instruction ins)
+{
+    return (IsDstDstSrcSIMDInstruction(ins) || IsDstSrcSrcSIMDInstruction(ins));
 }
 bool isAvxBlendv(instruction ins)
 {

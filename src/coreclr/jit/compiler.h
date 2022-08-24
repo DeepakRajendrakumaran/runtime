@@ -8923,6 +8923,11 @@ private:
 #endif
     }
 
+    bool canUseEvexEncoding() const // TODO-XArch-AVX512: Revisit compOpportunisticallyDependsOn() once avx512 instructions are added.
+    {
+        return JitConfig.JitStressEVEXEncoding();
+    }
+
     /*
     XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

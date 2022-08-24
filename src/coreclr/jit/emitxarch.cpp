@@ -34,9 +34,20 @@ bool emitter::IsSSEOrAVXInstruction(instruction ins)
     return (ins >= INS_FIRST_SSE_INSTRUCTION) && (ins <= INS_LAST_AVX_INSTRUCTION);
 }
 
+bool emitter::IsSSEOrAVXorAVX512Instruction(instruction ins)
+{
+    // TODO-XArch-AVX512: Fix check once AVX512 instructions are added.
+    return (ins >= INS_FIRST_SSE_INSTRUCTION) && (ins <= INS_LAST_AVX_INSTRUCTION);
+}
+
 bool emitter::IsAVXOnlyInstruction(instruction ins)
 {
     return (ins >= INS_FIRST_AVX_INSTRUCTION) && (ins <= INS_LAST_AVX_INSTRUCTION);
+}
+
+bool emitter::IsAVX512OnlyInstruction(instruction ins)
+{
+    return false; // TODO-XArch-AVX512: Fix check once AVX512 instructions are added.
 }
 
 bool emitter::IsFMAInstruction(instruction ins)
@@ -128,6 +139,16 @@ bool emitter::IsAVXInstruction(instruction ins) const
     return UseVEXEncoding() && IsSSEOrAVXInstruction(ins);
 }
 
+bool emitter::IsAVX512Instruction(instruction ins) const
+{
+    return UseEVEXEncoding() && IsSSEOrAVXorAVX512Instruction(ins);
+}
+
+bool emitter::IsSIMDInstruction(instruction ins) const
+{
+    return IsAVX512Instruction(ins) || IsAVXInstruction(ins);
+}
+
 // Returns true if the AVX instruction is a binary operator that requires 3 operands.
 // When we emit an instruction with only two operands, we will duplicate the destination
 // as a source.
@@ -139,6 +160,17 @@ bool emitter::IsDstDstSrcAVXInstruction(instruction ins)
     return ((CodeGenInterface::instInfo[ins] & INS_Flags_IsDstDstSrcAVXInstruction) != 0) && IsAVXInstruction(ins);
 }
 
+// Returns true if the SIMD instruction is a binary operator that requires 3 operands.
+// When we emit an instruction with only two operands, we will duplicate the destination
+// as a source.
+// TODO-XArch-Cleanup: This is a temporary solution for now. Eventually this needs to
+// be formalized by adding an additional field to instruction table to
+// to indicate whether a 3-operand instruction.
+bool emitter::IsDstDstSrcSIMDInstruction(instruction ins)
+{
+    return ((CodeGenInterface::instInfo[ins] & INS_Flags_IsDstDstSrcAVXInstruction) != 0) && IsSIMDInstruction(ins);
+}
+
 // Returns true if the AVX instruction requires 3 operands that duplicate the source
 // register in the vvvv field.
 // TODO-XArch-Cleanup: This is a temporary solution for now. Eventually this needs to
@@ -147,6 +179,16 @@ bool emitter::IsDstDstSrcAVXInstruction(instruction ins)
 bool emitter::IsDstSrcSrcAVXInstruction(instruction ins)
 {
     return ((CodeGenInterface::instInfo[ins] & INS_Flags_IsDstSrcSrcAVXInstruction) != 0) && IsAVXInstruction(ins);
+}
+
+// Returns true if the SIMD instruction requires 3 operands that duplicate the source
+// register in the vvvv field.
+// TODO-XArch-Cleanup: This is a temporary solution for now. Eventually this needs to
+// be formalized by adding an additional field to instruction table to
+// to indicate whether a 3-operand instruction.
+bool emitter::IsDstSrcSrcSIMDInstruction(instruction ins)
+{
+    return ((CodeGenInterface::instInfo[ins] & INS_Flags_IsDstSrcSrcAVXInstruction) != 0) && IsSIMDInstruction(ins);
 }
 
 //------------------------------------------------------------------------
@@ -579,6 +621,67 @@ bool emitter::Is4ByteSSEInstruction(instruction ins)
     return !UseVEXEncoding() && EncodedBySSE38orSSE3A(ins);
 }
 
+// TODO-XArch-AVX512: Flesh out logic once avx512 instructions are added. Add 'bool hasKMask' as argument.
+// Returns true if this instruction requires a EVEX prefix
+bool emitter::TakesEvexPrefix(instruction ins) const
+{
+    if (JitConfig.JitStressEVEXEncoding() && TakesVexPrefix(ins) && !CannotBeEvexEncoded(ins))
+    {
+        return true;
+    }
+    return false;
+}
+
+// Add base EVEX prefix without setting W, R, X, or B bits
+// L bit will be set based on emitter attr.
+//
+// 4-byte EVEX prefix = 62 <R, X, B, R', 0, 0, m, m> <W, v, v, v, v, 1, p, p> <z, L', L, b, V', a, a, a>
+// - R, X, B, W - bits to express corresponding REX prefixes.Additionally, X combines with B to expand r/m to 32 SIMD registers
+// - R' - combines with R to expand reg to 32 SIMD registers
+// - mm - lower 2 bits of m-mmmmm (5-bit) in corresponding VEX prefix
+// - vvvv (4-bits) - register specifier in 1's complement form; must be 1111 if unused
+// - pp (2-bits) - opcode extension providing equivalent functionality of a SIMD size prefix
+//                 these prefixes are treated mandatory when used with escape opcode 0Fh for
+//                 some SIMD instructions
+//   00  - None   (0F    - packed float)
+//   01  - 66     (66 0F - packed double)
+//   10  - F3     (F3 0F - scalar float
+//   11  - F2     (F2 0F - scalar double)
+// - z - bit to specify merging mode
+// - L - scalar or AVX-128 bit operations (L=0),  256-bit operations (L=1)
+// - L'- bit to support 512-bit operations or rounding control mode.
+// - b - broadcast/rc/sae context
+// - V'- bit to extend vvvv
+// - aaa - specifies mask register
+//    Rest    - reserved for future use and usage of them will uresult in Undefined instruction exception
+// #define DEFAULT_BYTE_EVEX_PREFIX 0x62F07C4800000000ULL Should L' be set?
+#define DEFAULT_BYTE_EVEX_PREFIX 0x62F07C0800000000ULL
+
+#define DEFAULT_BYTE_EVEX_PREFIX_MASK 0xFFFFFFFF00000000ULL
+#define LBIT_IN_BYTE_EVEX_PREFIX 0x0000002000000000ULL
+
+emitter::code_t emitter::AddEvexPrefix(instruction ins, code_t code, emitAttr attr)
+{
+
+    // Only AVX512 instructions require EVEX prefix
+    assert(IsAVX512Instruction(ins));
+
+    // Shouldn't have already added EVEX prefix
+    assert(!hasEvexPrefix(code));
+
+    assert((code & DEFAULT_BYTE_EVEX_PREFIX_MASK) == 0);
+
+    code |= DEFAULT_BYTE_EVEX_PREFIX;
+
+    // TODO-XArch-AVX512: Add EA_64BYTE once ZMM is supported
+    if (attr == EA_32BYTE)
+    {
+        // Set L bit to 1 in case of instructions that operate on 256-bits.
+        code |= LBIT_IN_BYTE_EVEX_PREFIX;
+    }
+    return code;
+}
+
 // Returns true if this instruction requires a VEX prefix
 // All AVX instructions require a VEX prefix
 bool emitter::TakesVexPrefix(instruction ins) const
@@ -856,6 +959,17 @@ unsigned RegEncoding(regNumber reg)
 // AVX:  specific bits within VEX prefix need to be set in bit-inverted form.
 emitter::code_t emitter::AddRexWPrefix(instruction ins, code_t code)
 {
+    if (UseEVEXEncoding() && IsAVX512Instruction(ins) && TakesEvexPrefix(ins))
+    {
+        if (codeEvexMigrationCheck(code)) // TODO-XArch-AVX512: Remove codeEvexMigrationCheck().
+        {
+            // W-bit is available in 4-byte EVEX prefix that starts with byte 62.
+            assert(hasEvexPrefix(code));
+
+            // W-bit is the only bit that is added in non bit-inverted form.
+            return emitter::code_t(code | 0x0000800000000000ULL);
+        }
+    }
     if (UseVEXEncoding() && IsAVXInstruction(ins))
     {
         if (TakesVexPrefix(ins))
@@ -879,18 +993,28 @@ emitter::code_t emitter::AddRexWPrefix(instruction ins, code_t code)
 
 emitter::code_t emitter::AddRexRPrefix(instruction ins, code_t code)
 {
+    if (UseEVEXEncoding() && IsAVX512Instruction(ins) && TakesEvexPrefix(ins))
+    {
+        if (codeEvexMigrationCheck(code)) // TODO-XArch-CQ: Remove codeEvexMigrationCheck().
+        {
+            // R-bit is available in 4-byte EVEX prefix that starts with byte 62.
+            assert(hasEvexPrefix(code));
+
+            // R-bit is added in bit-inverted form.
+            return code & 0xFF7FFFFFFFFFFFFFULL;
+        }
+    }
     if (UseVEXEncoding() && IsAVXInstruction(ins))
     {
         if (TakesVexPrefix(ins))
         {
-            // R-bit is supported by both 2-byte and 3-byte VEX prefix
+            // R-bit is supported by both 2-byte and 3-byte VEX prefix.
             assert(hasVexPrefix(code));
 
             // R-bit is added in bit-inverted form.
             return code & 0xFF7FFFFFFFFFFFULL;
         }
     }
-
     return code | 0x4400000000ULL;
 }
 
@@ -913,18 +1037,28 @@ emitter::code_t emitter::AddRexXPrefix(instruction ins, code_t code)
 
 emitter::code_t emitter::AddRexBPrefix(instruction ins, code_t code)
 {
+    if (UseEVEXEncoding() && IsAVX512Instruction(ins) && TakesEvexPrefix(ins))
+    {
+        if (codeEvexMigrationCheck(code)) // TODO-XArch-AVX512: Remove codeEvexMigrationCheck().
+        {
+            // B-bit is available in 4-byte EVEX prefix that starts with byte 62.
+            assert(hasEvexPrefix(code));
+
+            // B-bit is added in bit-inverted form.
+            return code & 0xFFDFFFFFFFFFFFFFULL;
+        }
+    }
     if (UseVEXEncoding() && IsAVXInstruction(ins))
     {
         if (TakesVexPrefix(ins))
         {
-            // B-bit is available only in 3-byte VEX prefix that starts with byte C4.
+            // B-bit is available in 3-byte VEX prefix that starts with byte C4.
             assert(hasVexPrefix(code));
 
             // B-bit is added in bit-inverted form.
             return code & 0xFFDFFFFFFFFFFFULL;
         }
     }
-
     return code | 0x4100000000ULL;
 }
 
@@ -952,6 +1086,375 @@ bool isPrefix(BYTE b)
     // That just leaves the size prefixes used in SSE opcodes:
     //      Scalar Double  Scalar Single  Packed Double
     return ((b == 0xF2) || (b == 0xF3) || (b == 0x66));
+}
+
+// Outputs EVEX prefix (in case of AVX instructions) and REX.R/X/W/B otherwise.
+unsigned emitter::emitOutputSIMDPrefixIfNeeded(instruction ins, BYTE* dst, code_t& code)
+{
+    // TODO-XArch-AVX512: Remove redundant code and collapse into single pathway for EVEX and VEX if possible.
+    if (hasEvexPrefix(code))
+    {
+        // Only AVX512 instructions should have an EVEX prefix
+        assert(IsAVX512Instruction(ins));
+
+        code_t evexPrefix = (code >> 32) & 0xFFFFFFFF;
+        code &= 0x00000000FFFFFFFFLL;
+
+        WORD leadingBytes = 0;
+        BYTE check        = (code >> 24) & 0xFF;
+        if (check != 0)
+        {
+            // check for a prefix in the 11 position
+            BYTE sizePrefix = (code >> 16) & 0xFF;
+            if ((sizePrefix != 0) && isPrefix(sizePrefix))
+            {
+                // 'pp' bits in byte 1 of EVEX prefix allows us to encode SIMD size prefixes as two bits
+                //
+                //   00  - None   (0F    - packed float)
+                //   01  - 66     (66 0F - packed double)
+                //   10  - F3     (F3 0F - scalar float
+                //   11  - F2     (F2 0F - scalar double)
+                switch (sizePrefix)
+                {
+                    case 0x66:
+                        if (IsBMIInstruction(ins))
+                        {
+                            switch (ins)
+                            {
+                                case INS_rorx:
+                                case INS_pdep:
+                                case INS_mulx:
+                                {
+                                    evexPrefix |= (0x03 << 8);
+                                    break;
+                                }
+
+                                case INS_pext:
+                                {
+                                    evexPrefix |= (0x02 << 8);
+                                    break;
+                                }
+
+                                default:
+                                {
+                                    evexPrefix |= (0x00 << 8);
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            evexPrefix |= (0x01 << 8);
+                        }
+                        break;
+                    case 0xF3:
+                        evexPrefix |= (0x02 << 8);
+                        break;
+                    case 0xF2:
+                        evexPrefix |= (0x03 << 8);
+                        break;
+                    default:
+                        assert(!"unrecognized SIMD size prefix");
+                        unreached();
+                }
+
+                // Now the byte in the 22 position must be an escape byte 0F
+                leadingBytes = check;
+                assert(leadingBytes == 0x0F);
+
+                // Get rid of both sizePrefix and escape byte
+                code &= 0x0000FFFFLL;
+
+                // Check the byte in the 33 position to see if it is 3A or 38.
+                // In such a case escape bytes must be 0x0F3A or 0x0F38
+                check = code & 0xFF;
+                if (check == 0x3A || check == 0x38)
+                {
+                    leadingBytes = (leadingBytes << 8) | check;
+                    code &= 0x0000FF00LL;
+                }
+            }
+        }
+        else
+        {
+            // 2-byte opcode with the bytes ordered as 0x0011RM22
+            // the byte in position 11 must be an escape byte.
+            leadingBytes = (code >> 16) & 0xFF;
+            assert(leadingBytes == 0x0F || leadingBytes == 0x00);
+            code &= 0xFFFF;
+        }
+
+        // If there is an escape byte it must be 0x0F or 0x0F3A or 0x0F38
+        // mm bits in byte 0 of EVEX prefix allows us to encode these
+        // implied leading bytes. They are identical to low two bits of VEX.mmmmm
+
+        switch (leadingBytes)
+        {
+            case 0x00:
+                // there is no leading byte
+                break;
+            case 0x0F:
+                evexPrefix |= (0x01 << 16);
+                break;
+            case 0x0F38:
+                evexPrefix |= (0x02 << 16);
+                break;
+            case 0x0F3A:
+                evexPrefix |= (0x03 << 16);
+                break;
+            default:
+                assert(!"encountered unknown leading bytes");
+                unreached();
+        }
+
+        // At this point
+        //     EVEX.2211RM33 got transformed as EVEX.0000RM33
+        //     EVEX.0011RM22 got transformed as EVEX.0000RM22
+        //
+        // Now output EVEX prefix leaving the 4-byte opcode
+        // EVEX prefix is always 4 bytes
+
+        emitOutputByte(dst, ((evexPrefix >> 24) & 0xFF));
+        emitOutputByte(dst + 1, ((evexPrefix >> 16) & 0xFF));
+        emitOutputByte(dst + 2, (evexPrefix >> 8) & 0xFF);
+        emitOutputByte(dst + 3, evexPrefix & 0xFF);
+        return 4;
+    }
+    else if (hasVexPrefix(code))
+    {
+        // Only AVX instructions should have a VEX prefix
+        assert(UseVEXEncoding() && IsAVXInstruction(ins));
+        code_t vexPrefix = (code >> 32) & 0x00FFFFFF;
+        code &= 0x00000000FFFFFFFFLL;
+
+        WORD leadingBytes = 0;
+        BYTE check        = (code >> 24) & 0xFF;
+        if (check != 0)
+        {
+            // 3-byte opcode: with the bytes ordered as 0x2211RM33 or
+            // 4-byte opcode: with the bytes ordered as 0x22114433
+            // check for a prefix in the 11 position
+            BYTE sizePrefix = (code >> 16) & 0xFF;
+            if ((sizePrefix != 0) && isPrefix(sizePrefix))
+            {
+                // 'pp' bits in byte2 of VEX prefix allows us to encode SIMD size prefixes as two bits
+                //
+                //   00  - None   (0F    - packed float)
+                //   01  - 66     (66 0F - packed double)
+                //   10  - F3     (F3 0F - scalar float
+                //   11  - F2     (F2 0F - scalar double)
+                switch (sizePrefix)
+                {
+                    case 0x66:
+                        if (IsBMIInstruction(ins))
+                        {
+                            switch (ins)
+                            {
+                                case INS_rorx:
+                                case INS_pdep:
+                                case INS_mulx:
+// TODO: Unblock when enabled for x86
+#ifdef TARGET_AMD64
+                                case INS_shrx:
+#endif
+                                {
+                                    vexPrefix |= 0x03;
+                                    break;
+                                }
+
+                                case INS_pext:
+// TODO: Unblock when enabled for x86
+#ifdef TARGET_AMD64
+                                case INS_sarx:
+#endif
+                                {
+                                    vexPrefix |= 0x02;
+                                    break;
+                                }
+// TODO: Unblock when enabled for x86
+#ifdef TARGET_AMD64
+                                case INS_shlx:
+                                {
+                                    vexPrefix |= 0x01;
+                                    break;
+                                }
+#endif
+                                default:
+                                {
+                                    vexPrefix |= 0x00;
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            vexPrefix |= 0x01;
+                        }
+                        break;
+                    case 0xF3:
+                        vexPrefix |= 0x02;
+                        break;
+                    case 0xF2:
+                        vexPrefix |= 0x03;
+                        break;
+                    default:
+                        assert(!"unrecognized SIMD size prefix");
+                        unreached();
+                }
+
+                // Now the byte in the 22 position must be an escape byte 0F
+                leadingBytes = check;
+                assert(leadingBytes == 0x0F);
+
+                // Get rid of both sizePrefix and escape byte
+                code &= 0x0000FFFFLL;
+
+                // Check the byte in the 33 position to see if it is 3A or 38.
+                // In such a case escape bytes must be 0x0F3A or 0x0F38
+                check = code & 0xFF;
+                if (check == 0x3A || check == 0x38)
+                {
+                    leadingBytes = (leadingBytes << 8) | check;
+                    code &= 0x0000FF00LL;
+                }
+            }
+        }
+        else
+        {
+            // 2-byte opcode with the bytes ordered as 0x0011RM22
+            // the byte in position 11 must be an escape byte.
+            leadingBytes = (code >> 16) & 0xFF;
+            assert(leadingBytes == 0x0F || leadingBytes == 0x00);
+            code &= 0xFFFF;
+        }
+
+        // If there is an escape byte it must be 0x0F or 0x0F3A or 0x0F38
+        // m-mmmmm bits in byte 1 of VEX prefix allows us to encode these
+        // implied leading bytes. 0x0F is supported by both the 2-byte and
+        // 3-byte encoding. While 0x0F3A and 0x0F38 are only supported by
+        // the 3-byte version.
+
+        switch (leadingBytes)
+        {
+            case 0x00:
+                // there is no leading byte
+                break;
+            case 0x0F:
+                vexPrefix |= 0x0100;
+                break;
+            case 0x0F38:
+                vexPrefix |= 0x0200;
+                break;
+            case 0x0F3A:
+                vexPrefix |= 0x0300;
+                break;
+            default:
+                assert(!"encountered unknown leading bytes");
+                unreached();
+        }
+
+        // At this point
+        //     VEX.2211RM33 got transformed as VEX.0000RM33
+        //     VEX.0011RM22 got transformed as VEX.0000RM22
+        //
+        // Now output VEX prefix leaving the 4-byte opcode
+
+        // The 2-byte VEX encoding, requires that the X and B-bits are set (these
+        // bits are inverted from the REX values so set means off), the W-bit is
+        // not set (this bit is not inverted), and that the m-mmmm bits are 0-0001
+        // (the 2-byte VEX encoding only supports the 0x0F leading byte). When these
+        // conditions are met, we can change byte-0 from 0xC4 to 0xC5 and then
+        // byte-1 is the logical-or of bit 7 from byte-1 and bits 0-6 from byte 2
+        // from the 3-byte VEX encoding.
+        //
+        // Given the above, the check can be reduced to a simple mask and comparison.
+        // * 0xFFFF7F80 is a mask that ignores any bits whose value we don't care about:
+        //   * R can be set or unset              (0x7F ignores bit 7)
+        //   * vvvv can be any value              (0x80 ignores bits 3-6)
+        //   * L can be set or unset              (0x80 ignores bit 2)
+        //   * pp can be any value                (0x80 ignores bits 0-1)
+        // * 0x00C46100 is a value that signifies the requirements listed above were met:
+        //   * We must be a three-byte VEX opcode (0x00C4)
+        //   * X and B must be set                (0x61 validates bits 5-6)
+        //   * m-mmmm must be 0-00001             (0x61 validates bits 0-4)
+        //   * W must be unset                    (0x00 validates bit 7)
+        if ((vexPrefix & 0xFFFF7F80) == 0x00C46100)
+        {
+            // Encoding optimization calculation is not done while estimating the instruction
+            // size and thus over-predict instruction size by 1 byte.
+            // If there are IGs that will be aligned, do not optimize encoding so the
+            // estimated alignment sizes are accurate.
+            if (emitCurIG->igNum > emitLastAlignedIgNum)
+            {
+                emitOutputByte(dst, 0xC5);
+                emitOutputByte(dst + 1, ((vexPrefix >> 8) & 0x80) | (vexPrefix & 0x7F));
+                return 2;
+            }
+        }
+
+        emitOutputByte(dst, ((vexPrefix >> 16) & 0xFF));
+        emitOutputByte(dst + 1, ((vexPrefix >> 8) & 0xFF));
+        emitOutputByte(dst + 2, vexPrefix & 0xFF);
+        return 3;
+    }
+
+#ifdef TARGET_AMD64
+    if (code > 0x00FFFFFFFFLL)
+    {
+        BYTE prefix = (code >> 32) & 0xFF;
+        noway_assert(prefix >= 0x40 && prefix <= 0x4F);
+        code &= 0x00000000FFFFFFFFLL;
+
+        // TODO-AMD64-Cleanup: when we remove the prefixes (just the SSE opcodes right now)
+        // we can remove this code as well
+
+        // The REX prefix is required to come after all other prefixes.
+        // Some of our 'opcodes' actually include some prefixes, if that
+        // is the case, shift them over and place the REX prefix after
+        // the other prefixes, and emit any prefix that got moved out.
+        BYTE check = (code >> 24) & 0xFF;
+        if (check == 0)
+        {
+            // 3-byte opcode: with the bytes ordered as 0x00113322
+            // check for a prefix in the 11 position
+            check = (code >> 16) & 0xFF;
+            if (check != 0 && isPrefix(check))
+            {
+                // Swap the rex prefix and whatever this prefix is
+                code = (((DWORD)prefix << 16) | (code & 0x0000FFFFLL));
+                // and then emit the other prefix
+                return emitOutputByte(dst, check);
+            }
+        }
+        else
+        {
+            // 4-byte opcode with the bytes ordered as 0x22114433
+            // first check for a prefix in the 11 position
+            BYTE check2 = (code >> 16) & 0xFF;
+            if (isPrefix(check2))
+            {
+                assert(!isPrefix(check)); // We currently don't use this, so it is untested
+                if (isPrefix(check))
+                {
+                    // 3 prefixes were rex = rr, check = c1, check2 = c2 encoded as 0xrrc1c2XXXX
+                    // Change to c2rrc1XXXX, and emit check2 now
+                    code = (((code_t)prefix << 24) | ((code_t)check << 16) | (code & 0x0000FFFFLL));
+                }
+                else
+                {
+                    // 2 prefixes were rex = rr, check2 = c2 encoded as 0xrrXXc2XXXX, (check is part of the opcode)
+                    // Change to c2XXrrXXXX, and emit check2 now
+                    code = (((code_t)check << 24) | ((code_t)prefix << 16) | (code & 0x0000FFFFLL));
+                }
+                return emitOutputByte(dst, check2);
+            }
+        }
+
+        return emitOutputByte(dst, prefix);
+    }
+#endif // TARGET_AMD64
+
+    return 0;
 }
 
 // Outputs VEX prefix (in case of AVX instructions) and REX.R/X/W/B otherwise.
@@ -1236,6 +1739,19 @@ unsigned emitter::emitGetRexPrefixSize(instruction ins)
     return 1;
 }
 
+// Size of SIMD prefix in bytes
+unsigned emitter::emitGetEvexPrefixSize(instrDesc* id)
+{
+    instruction ins = id->idIns();
+    if (IsAVX512Instruction(ins))
+    {
+        return 4;
+    }
+
+    // If not AVX512, then we don't need to encode prefix.
+    return 0;
+}
+
 // Size of vex prefix in bytes
 unsigned emitter::emitGetVexPrefixSize(instruction ins, emitAttr attr)
 {
@@ -1248,6 +1764,138 @@ unsigned emitter::emitGetVexPrefixSize(instruction ins, emitAttr attr)
     return 0;
 }
 
+
+//------------------------------------------------------------------------
+// emitGetAdjustedSizeSIMD: Determines any size adjustment needed for a given instruction based on the current
+// configuration.
+//
+// Arguments:
+//    id   -- Instruction descriptor of the instruction being emitted
+//    code  -- The current opcode and any known prefixes
+unsigned emitter::emitGetAdjustedSizeSIMD(instrDesc* id, code_t code)
+{
+    unsigned adjustedSize = 0;
+    instruction ins          = id->idIns();
+    emitAttr    attr         = id->idOpSize();
+
+    // TODO-XArch-AVX512: Remove redundant code and possiblly collapse EVEX and VEX into a single pathway
+    if (IsAVX512Instruction(ins) && TakesEvexPrefix(ins) && migratedEvexInstFormats(id)) // TODO-XArch-AVX512: Remove migratedEvexInstFormats
+                                                                                         // once EVEX fully enabled
+    {
+        // EVEX prefix encodes some bytes of the opcode and as a result, overall size of the instruction reduces.
+        // Therefore, to estimate the size adding EVEX prefix size and size of instruction opcode bytes will always
+        // overstimate.
+        // Instead this routine will adjust the size of EVEX prefix based on the number of bytes of opcode it encodes so
+        // that
+        // instruction size estimate will be accurate.
+        // Basically this  will decrease the evexPrefixSize, so that opcodeSize + evexPrefixAdjustedSize will be the
+        // right size.
+        //
+        // rightOpcodeSize + evexPrefixSize
+        //  = (opcodeSize - ExtrabytesSize) + evexPrefixSize
+        //  = opcodeSize + (evexPrefixSize - ExtrabytesSize)
+        //  = opcodeSize + evexPrefixAdjustedSize
+
+        unsigned evexPrefixAdjustedSize = emitGetEvexPrefixSize(id);
+        assert(evexPrefixAdjustedSize == 4);
+
+        // In this case, opcode will contains escape prefix at least one byte,
+        // simdPrefixAdjustedSize should be minus one.
+        evexPrefixAdjustedSize -= 1;
+
+        // Get the fourth byte in Opcode.
+        // If this byte is non-zero, then we should check whether the opcode contains SIMD prefix or not.
+        BYTE check = (code >> 24) & 0xFF;
+        if (check != 0)
+        {
+            // 3-byte opcode: with the bytes ordered as 0x2211RM33 or
+            // 4-byte opcode: with the bytes ordered as 0x22114433
+            // Simd prefix is at the first byte.
+            BYTE sizePrefix = (code >> 16) & 0xFF;
+            if (sizePrefix != 0 && isPrefix(sizePrefix))
+            {
+                evexPrefixAdjustedSize -= 1;
+            }
+
+            // If the opcode size is 4 bytes, then the second escape prefix is at fourth byte in opcode.
+            // But in this case the opcode has not counted R\M part.
+            // opcodeSize + evexPrefixAdjustedSize - ExtraEscapePrefixSize + ModR\MSize
+            //=opcodeSize + evexPrefixAdjustedSize -1 + 1
+            //=opcodeSize + evexPrefixAdjustedSize
+            // So although we may have second byte escape prefix, we won't decrease evexPrefixAdjustedSize.
+        }
+
+        adjustedSize = evexPrefixAdjustedSize;
+    }
+    else if (IsAVXInstruction(ins))
+    {
+        // VEX prefix encodes some bytes of the opcode and as a result, overall size of the instruction reduces.
+        // Therefore, to estimate the size adding VEX prefix size and size of instruction opcode bytes will always
+        // overstimate.
+        // Instead this routine will adjust the size of VEX prefix based on the number of bytes of opcode it encodes so
+        // that
+        // instruction size estimate will be accurate.
+        // Basically this  will decrease the vexPrefixSize, so that opcodeSize + vexPrefixAdjustedSize will be the right
+        // size.
+        //
+        // rightOpcodeSize + vexPrefixSize
+        //  = (opcodeSize - ExtrabytesSize) + vexPrefixSize
+        //  = opcodeSize + (vexPrefixSize - ExtrabytesSize)
+        //  = opcodeSize + vexPrefixAdjustedSize
+
+        unsigned simdPrefixAdjustedSize = emitGetVexPrefixSize(ins, attr);
+        assert(simdPrefixAdjustedSize == 3);
+
+        // In this case, opcode will contains escape prefix at least one byte,
+        // vexPrefixAdjustedSize should be minus one.
+        simdPrefixAdjustedSize -= 1;
+
+        // Get the fourth byte in Opcode.
+        // If this byte is non-zero, then we should check whether the opcode contains SIMD prefix or not.
+        BYTE check = (code >> 24) & 0xFF;
+        if (check != 0)
+        {
+            // 3-byte opcode: with the bytes ordered as 0x2211RM33 or
+            // 4-byte opcode: with the bytes ordered as 0x22114433
+            // Simd prefix is at the first byte.
+            BYTE sizePrefix = (code >> 16) & 0xFF;
+            if (sizePrefix != 0 && isPrefix(sizePrefix))
+            {
+                simdPrefixAdjustedSize -= 1;
+            }
+
+            // If the opcode size is 4 bytes, then the second escape prefix is at fourth byte in opcode.
+            // But in this case the opcode has not counted R\M part.
+            // opcodeSize + VexPrefixAdjustedSize - ExtraEscapePrefixSize + ModR\MSize
+            //=opcodeSize + VexPrefixAdjustedSize -1 + 1
+            //=opcodeSize + VexPrefixAdjustedSize
+            // So although we may have second byte escape prefix, we won't decrease vexPrefixAdjustedSize.
+        }
+
+        adjustedSize = simdPrefixAdjustedSize;
+    }
+    else if (Is4ByteSSEInstruction(ins))
+    {
+        // The 4-Byte SSE instructions require one additional byte to hold the ModRM byte
+        adjustedSize++;
+    }
+    else
+    {
+        if (ins == INS_crc32)
+        {
+            // Adjust code size for CRC32 that has 4-byte opcode but does not use SSE38 or EES3A encoding.
+            adjustedSize++;
+        }
+
+        if ((attr == EA_2BYTE) && (ins != INS_movzx) && (ins != INS_movsx))
+        {
+            // Most 16-bit operand instructions will need a 0x66 prefix.
+            adjustedSize++;
+        }
+    }
+
+    return adjustedSize;
+}
 //------------------------------------------------------------------------
 // emitGetAdjustedSize: Determines any size adjustment needed for a given instruction based on the current
 // configuration.
@@ -1340,6 +1988,11 @@ unsigned emitter::emitGetAdjustedSize(instruction ins, emitAttr attr, code_t cod
 //
 unsigned emitter::emitGetPrefixSize(code_t code, bool includeRexPrefixSize)
 {
+    if (hasEvexPrefix(code))
+    {
+        return 4;
+    }
+
     if (hasVexPrefix(code))
     {
         return 3;
@@ -1839,14 +2492,14 @@ inline unsigned emitter::insEncodeReg345(instruction ins, regNumber reg, emitAtt
 
 /***********************************************************************************
  *
- *  Returns modified AVX opcode with the specified register encoded in bits 3-6 of
- *  byte 2 of VEX prefix.
+ *  Returns modified SIMD opcode with the specified register encoded in bits 3-6 of
+ *  byte 2 of VEX and EVEX prefix.
  */
 inline emitter::code_t emitter::insEncodeReg3456(instruction ins, regNumber reg, emitAttr size, code_t code)
 {
     assert(reg < REG_STK);
-    assert(IsAVXInstruction(ins));
-    assert(hasVexPrefix(code));
+    assert(IsSIMDInstruction(ins));
+    assert(hasSIMDPrefix(code));
 
     // Get 4-bit register encoding
     // RegEncoding() gives lower 3 bits
@@ -1857,10 +2510,30 @@ inline emitter::code_t emitter::insEncodeReg3456(instruction ins, regNumber reg,
         regBits |= 0x08;
     }
 
-    // VEX prefix encodes register operand in 1's complement form
-    // Shift count = 4-bytes of opcode + 0-2 bits
+    // Both prefix encodes register operand in 1's complement form 
     assert(regBits <= 0xF);
-    regBits <<= 35;
+    if (UseEVEXEncoding() && IsAVX512Instruction(ins) && TakesEvexPrefix(ins))
+    {
+        if (codeEvexMigrationCheck(code))
+        {
+            assert(hasEvexPrefix(code));
+
+            // Shift count = 5-bytes of opcode + 0-2 bits for EVEX
+            regBits <<= 43;
+            return code ^ regBits;
+        }
+    }
+    if (UseVEXEncoding() && IsAVXInstruction(ins))
+    {
+        if (TakesVexPrefix(ins))
+        {
+            assert(hasVexPrefix(code));
+
+            // Shift count = 4-bytes of opcode + 0-2 bits for VEX
+            regBits <<= 35;
+            return code ^ regBits;
+        }
+    }
     return code ^ regBits;
 }
 
@@ -2168,7 +2841,7 @@ inline UNATIVE_OFFSET emitter::emitInsSizeRR(instrDesc* id, code_t code)
     instruction ins  = id->idIns();
     emitAttr    attr = id->idOpSize();
 
-    UNATIVE_OFFSET sz = emitGetAdjustedSize(ins, attr, code);
+    UNATIVE_OFFSET sz = emitGetAdjustedSizeSIMD(id, code);
 
     bool includeRexPrefixSize = true;
     // REX prefix
@@ -12721,18 +13394,22 @@ BYTE* emitter::emitOutputRRR(BYTE* dst, instrDesc* id)
     code_t code;
 
     instruction ins = id->idIns();
-    assert(IsAVXInstruction(ins));
-    assert(IsThreeOperandAVXInstruction(ins) || isAvxBlendv(ins));
+    assert(IsSIMDInstruction(ins));
+    assert(IsThreeOperandSIMDInstruction(ins) || isAvxBlendv(ins));
     regNumber targetReg = id->idReg1();
     regNumber src1      = id->idReg2();
     regNumber src2      = id->idReg3();
     emitAttr  size      = id->idOpSize();
 
     code = insCodeRM(ins);
-    code = AddVexPrefixIfNeeded(ins, code, size);
+    code = AddSIMDPrefixIfNeeded(ins, code, size);
+
     code = insEncodeRMreg(ins, code);
 
-    if (TakesRexWPrefix(ins, size))
+    // TODO-XARCH-AVX512 : Update this check once all paths have EVEX support.
+    // Explore moving IsWEvexOpcodeExtension() logic inside TakesRexWPrefix(). Not doind so currently
+    // since we cannot differentiate EVEX vs VEX without 'code' untill all paths have EVEX support.
+    if (TakesRexWPrefix(ins, size) || (codeEvexMigrationCheck(code) && IsWEvexOpcodeExtension(ins)))
     {
         code = AddRexWPrefix(ins, code);
     }
@@ -12742,8 +13419,8 @@ BYTE* emitter::emitOutputRRR(BYTE* dst, instrDesc* id)
     // encode source operand reg in 'vvvv' bits in 1's complement form
     code = insEncodeReg3456(ins, src1, size, code);
 
-    // Output the REX prefix
-    dst += emitOutputRexOrVexPrefixIfNeeded(ins, dst, code);
+    // Output the REX/VEX/EVEX prefix
+    dst += emitOutputSIMDPrefixIfNeeded(ins, dst, code);
 
     // Is this a 'big' opcode?
     if (code & 0xFF000000)
@@ -12766,7 +13443,7 @@ BYTE* emitter::emitOutputRRR(BYTE* dst, instrDesc* id)
     else if ((code & 0xFF) == 0x00)
     {
         // This case happens for AVX instructions only
-        assert(IsAVXInstruction(ins));
+        assert(IsSIMDInstruction(ins));
 
         dst += emitOutputByte(dst, (code >> 8) & 0xFF);
         dst += emitOutputByte(dst, (0xC0 | regCode));
