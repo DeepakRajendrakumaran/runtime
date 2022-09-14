@@ -183,35 +183,20 @@ bool migratedEvexInstFormats(instrDesc* id) const
     }
 }
 
-void checkMigratedIns(instrDesc* id)
-{
-    
-    instruction ins = id->idIns();
-    switch (ins)
-    {
-        case INS_xorps:
-        case INS_pshufb:
-        case INS_addsd:
-        case INS_mulsd:
-        case INS_packuswb:
-        {
-            return;
-        }
-        default:
-        {
-            emitDispIns(id, true, false, false);
-            // assert(0);
-        }
-    }
-}
-
+// TODO-XArch-AVX512: Explore adding this as a flag to instr table.
 bool IsWEvexOpcodeExtension(instruction ins)
 {
+    if (!TakesEvexPrefix(ins))
+    {
+        return false;
+    }
+
     switch (ins)
     {
         case INS_addpd:
         case INS_addsd:
         case INS_movsd:
+        case INS_movsdsse2:
         case INS_mulsd:
         case INS_mulpd:
         case INS_movntpd:
@@ -291,7 +276,7 @@ bool IsWEvexOpcodeExtension(instruction ins)
         case INS_vfnmsub213sd:
         case INS_vfnmsub231sd:
         case INS_unpcklpd:
-        // case INS_permilpdvar:
+        case INS_vpermilpdvar:
         {
             return true; // W1
         }
@@ -401,7 +386,7 @@ bool IsWEvexOpcodeExtension(instruction ins)
         case INS_vpdpwssd:
         case INS_vpdpbusds:
         case INS_vpdpwssds:
-        // case INS_permilpsvar:
+        case INS_vpermilpsvar:
         {
             return false; // W0
         }
@@ -412,13 +397,13 @@ bool IsWEvexOpcodeExtension(instruction ins)
     }
 }
 
-bool CannotBeEvexEncoded(instruction ins) const
+// TODO-XArch-AVX512: Currently kmask is not supported.
+// Refactor once kmask is added.
+bool RequiresKMaskForEvex(instruction ins) const
 {
     switch (ins)
     {
-        case INS_pmovmskb:
-        case INS_movmskpd:
-        case INS_movmskps:
+        // Requires KMask.
         case INS_pcmpgtb:
         case INS_pcmpgtd:
         case INS_pcmpgtw:
@@ -427,97 +412,17 @@ bool CannotBeEvexEncoded(instruction ins) const
         case INS_pcmpeqd:
         case INS_pcmpeqq:
         case INS_pcmpeqw:
-        case INS_por:
-        case INS_pxor:
-        case INS_dppd:
-        case INS_dpps:
-        case INS_movdqa:
-        case INS_movdqu:
-        case INS_maskmovdqu:
-        case INS_haddps:
-        case INS_haddpd:
-        case INS_hsubps:
-        case INS_hsubpd:
-        case INS_addsubps:
-        case INS_addsubpd:
-        case INS_rcpps:
-        case INS_rcpss:
-        case INS_rsqrtps:
-        case INS_rsqrtss:
-        case INS_pand:
-        case INS_pandn:
-        case INS_psignb:
-        case INS_psignd:
-        case INS_psignw:
-        case INS_roundps:
-        case INS_roundss:
-        case INS_roundpd:
-        case INS_roundsd:
-        case INS_blendps:
-        case INS_blendpd:
-        case INS_blendvps:
-        case INS_blendvpd:
-        case INS_pblendw:
-        case INS_pblendvb:
-        case INS_phaddw:
-        case INS_phsubw:
-        case INS_phsubd:
-        case INS_phaddsw:
-        case INS_phsubsw:
-        case INS_lddqu:
-        case INS_phminposuw:
-        case INS_mpsadbw:
-        case INS_pclmulqdq:
-        case INS_aesdec:
-        case INS_aesdeclast:
-        case INS_aesenc:
-        case INS_aesenclast:
-        case INS_aesimc:
-        case INS_aeskeygenassist:
-        case INS_vextractf128:
-        case INS_vextracti128:
-        case INS_vinsertf128:
-        case INS_vinserti128:
-        case INS_vzeroupper:
-        case INS_vperm2i128:
-        case INS_vpblendd:
-        case INS_vblendvps:
-        case INS_vblendvpd:
-        case INS_vpblendvb:
-        case INS_vtestps:
-        case INS_vtestpd:
-        case INS_vperm2f128:
-        case INS_vbroadcastf128:
-        case INS_vbroadcasti128:
-        case INS_vmaskmovps:
-        case INS_vmaskmovpd:
-        case INS_vpmaskmovd:
-        case INS_vpmaskmovq:
-        case INS_andn:
-        case INS_blsi:
-        case INS_blsmsk:
-        case INS_blsr:
-        case INS_bextr:
-        case INS_rorx:
-        case INS_pdep:
-        case INS_pext:
-        case INS_bzhi:
-        case INS_mulx:
         case INS_cmpps:
         case INS_cmpss:
         case INS_cmppd:
         case INS_cmpsd:
-        case INS_phaddd:
-#ifdef TARGET_AMD64
-        case INS_shlx:
-        case INS_sarx:
-        case INS_shrx:
-#endif
         {
             return true;
         }
         default:
+        {
             return false;
+        }
     }
 }
 

@@ -141,6 +141,109 @@ bool emitter::IsAVXInstruction(instruction ins) const
 
 bool emitter::IsAVX512Instruction(instruction ins) const
 {
+    bool cannotBeEvexEncoded = false;
+    switch (ins)
+    {
+        // No EVEX Encoding exists at all.
+        case INS_pmovmskb:
+        case INS_movmskpd:
+        case INS_movmskps:
+        case INS_dppd:
+        case INS_dpps:
+        case INS_maskmovdqu:
+        case INS_haddps:
+        case INS_haddpd:
+        case INS_hsubps:
+        case INS_hsubpd:
+        case INS_addsubps:
+        case INS_addsubpd:
+        case INS_rcpps:
+        case INS_rcpss:
+        case INS_rsqrtps:
+        case INS_rsqrtss:
+        case INS_psignb:
+        case INS_psignd:
+        case INS_psignw:
+        case INS_roundps:
+        case INS_roundss:
+        case INS_roundpd:
+        case INS_roundsd:
+        case INS_blendps:
+        case INS_blendpd:
+        case INS_blendvps:
+        case INS_blendvpd:
+        case INS_phaddw:
+        case INS_phsubw:
+        case INS_phaddd:
+        case INS_phsubd:
+        case INS_phaddsw:
+        case INS_phsubsw:
+        case INS_lddqu:
+        case INS_phminposuw:
+        case INS_mpsadbw:
+        case INS_pclmulqdq:
+        case INS_aesdec:
+        case INS_aesdeclast:
+        case INS_aesenc:
+        case INS_aesenclast:
+        case INS_aesimc:
+        case INS_aeskeygenassist:
+        case INS_vzeroupper:
+        case INS_vperm2i128:
+        case INS_vperm2f128:
+        case INS_vpblendd:
+        case INS_vblendvps:
+        case INS_vblendvpd:
+        case INS_vpblendvb:
+        case INS_vtestps:
+        case INS_vtestpd:
+        case INS_vmaskmovps:
+        case INS_vmaskmovpd:
+        case INS_vpmaskmovd:
+        case INS_vpmaskmovq:
+        case INS_andn:
+        case INS_blsi:
+        case INS_blsmsk:
+        case INS_blsr:
+        case INS_bextr:
+        case INS_rorx:
+        case INS_pdep:
+        case INS_pext:
+        case INS_bzhi:
+        case INS_mulx:
+#ifdef TARGET_AMD64
+        case INS_shlx:
+        case INS_sarx:
+        case INS_shrx:
+#endif
+        // Might need new INS_<INS_NAME>*suffix* instructions for these.
+        case INS_por:            // INS_pord, INS_porq.
+        case INS_pxor:           // INS_pxord, INS_pxorq
+        case INS_movdqa:         // INS_movdqa32, INS_movdqa64.
+        case INS_movdqu:         // INS_movdqu8, INS_movdqu16, INS_movdqu32, INS_movdqu64.
+        case INS_pand:           // INS_pandd, INS_pandq.
+        case INS_pandn:          // INS_pandnd, INS_pandnq.
+        case INS_vextractf128:   // INS_vextractf32x4, INS_vextractf64x2.
+        case INS_vextracti128:   // INS_vextracti32x4, INS_vextracti64x2.
+        case INS_vinsertf128:    // INS_vinsertf32x4, INS_vinsertf64x2.
+        case INS_vinserti128:    // INS_vinserti32x4, INS_vinserti64x2.
+        case INS_vbroadcastf128: // INS_vbroadcastf32x4, INS_vbroadcastf64x2.
+        case INS_vbroadcasti128: // INS_vbroadcasti32x4, INS_vbroadcasti64x2.
+        {
+            cannotBeEvexEncoded = true;
+        }
+        default:
+        {
+            cannotBeEvexEncoded = false;
+        }
+    }
+
+    if (cannotBeEvexEncoded)
+    {
+        return false;
+
+    }
+
     return UseEVEXEncoding() && IsSSEOrAVXorAVX512Instruction(ins);
 }
 
@@ -621,15 +724,21 @@ bool emitter::Is4ByteSSEInstruction(instruction ins)
     return !UseVEXEncoding() && EncodedBySSE38orSSE3A(ins);
 }
 
+
 // TODO-XArch-AVX512: Flesh out logic once avx512 instructions are added. Add 'bool hasKMask' as argument.
 // Returns true if this instruction requires a EVEX prefix
 bool emitter::TakesEvexPrefix(instruction ins) const
 {
-    if (JitConfig.JitStressEVEXEncoding() && TakesVexPrefix(ins) && !CannotBeEvexEncoded(ins))
+    if (!JitConfig.JitStressEVEXEncoding())
     {
-        return true;
+        return false;
     }
-    return false;
+
+    if (RequiresKMaskForEvex(ins))
+    {
+        return false;
+    }
+    return IsAVX512Instruction(ins);
 }
 
 // Add base EVEX prefix without setting W, R, X, or B bits
