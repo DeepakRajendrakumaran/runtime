@@ -141,7 +141,6 @@ bool emitter::IsAVXInstruction(instruction ins) const
 
 bool emitter::IsAVX512Instruction(instruction ins) const
 {
-    bool cannotBeEvexEncoded = false;
     switch (ins)
     {
         // No EVEX Encoding exists at all.
@@ -171,6 +170,8 @@ bool emitter::IsAVX512Instruction(instruction ins) const
         case INS_blendps:
         case INS_blendpd:
         case INS_blendvps:
+        case INS_pblendw:
+        case INS_pblendvb:
         case INS_blendvpd:
         case INS_phaddw:
         case INS_phsubw:
@@ -216,6 +217,14 @@ bool emitter::IsAVX512Instruction(instruction ins) const
         case INS_sarx:
         case INS_shrx:
 #endif
+        case INS_lfence:
+        case INS_mfence:
+        case INS_movnti:
+        case INS_prefetchnta:
+        case INS_prefetcht0:
+        case INS_prefetcht1:
+        case INS_prefetcht2:
+        case INS_sfence:
         // Might need new INS_<INS_NAME>*suffix* instructions for these.
         case INS_por:            // INS_pord, INS_porq.
         case INS_pxor:           // INS_pxord, INS_pxorq
@@ -230,18 +239,12 @@ bool emitter::IsAVX512Instruction(instruction ins) const
         case INS_vbroadcastf128: // INS_vbroadcastf32x4, INS_vbroadcastf64x2.
         case INS_vbroadcasti128: // INS_vbroadcasti32x4, INS_vbroadcasti64x2.
         {
-            cannotBeEvexEncoded = true;
+            return false;
         }
         default:
         {
-            cannotBeEvexEncoded = false;
+            break;
         }
-    }
-
-    if (cannotBeEvexEncoded)
-    {
-        return false;
-
     }
 
     return UseEVEXEncoding() && IsSSEOrAVXorAVX512Instruction(ins);
@@ -725,7 +728,8 @@ bool emitter::Is4ByteSSEInstruction(instruction ins)
 }
 
 
-// TODO-XArch-AVX512: Flesh out logic once avx512 instructions are added. Add 'bool hasKMask' as argument.
+// TODO-XArch-AVX512: Flesh out logic once avx512 instructions are added.
+// Update 'RequiresKMaskForEvex()' once kmask support is added.
 // Returns true if this instruction requires a EVEX prefix
 bool emitter::TakesEvexPrefix(instruction ins) const
 {
@@ -1888,8 +1892,7 @@ unsigned emitter::emitGetAdjustedSizeSIMD(instrDesc* id, code_t code)
     emitAttr    attr         = id->idOpSize();
 
     // TODO-XArch-AVX512: Remove redundant code and possiblly collapse EVEX and VEX into a single pathway
-    if (IsAVX512Instruction(ins) && TakesEvexPrefix(ins) && migratedEvexInstFormats(id)) // TODO-XArch-AVX512: Remove migratedEvexInstFormats
-                                                                                         // once EVEX fully enabled
+    if (IsAVX512Instruction(ins) && TakesEvexPrefix(ins))
     {
         // EVEX prefix encodes some bytes of the opcode and as a result, overall size of the instruction reduces.
         // Therefore, to estimate the size adding EVEX prefix size and size of instruction opcode bytes will always
@@ -13516,8 +13519,7 @@ BYTE* emitter::emitOutputRRR(BYTE* dst, instrDesc* id)
     code = insEncodeRMreg(ins, code);
 
     // TODO-XARCH-AVX512 : Update this check once all paths have EVEX support.
-    // Explore moving IsWEvexOpcodeExtension() logic inside TakesRexWPrefix(). Not doind so currently
-    // since we cannot differentiate EVEX vs VEX without 'code' untill all paths have EVEX support.
+    // Explore moving IsWEvexOpcodeExtension() logic to instruction table as flag.
     if (TakesRexWPrefix(ins, size) || (codeEvexMigrationCheck(code) && IsWEvexOpcodeExtension(ins)))
     {
         code = AddRexWPrefix(ins, code);

@@ -168,21 +168,6 @@ code_t AddVexPrefixIfNeededAndNotPresent(instruction ins, code_t code, emitAttr 
     return code;
 }
 
-bool migratedEvexInstFormats(instrDesc* id) const
-{
-    switch (id->idInsFmt())
-    {
-        case IF_RWR_RRD_RRD:
-        case IF_RWR_RRD_RRD_CNS:
-        case IF_RWR_RRD_RRD_RRD:
-        {
-            return true;
-        }
-        default:
-            return false;
-    }
-}
-
 // TODO-XArch-AVX512: Explore adding this as a flag to instr table.
 bool IsWEvexOpcodeExtension(instruction ins)
 {
