@@ -160,27 +160,10 @@ const char* CodeGen::genSizeStr(emitAttr attr)
         "",
         "byte  ptr ",
         "word  ptr ",
-        nullptr,
         "dword ptr ",
-        nullptr,
-        nullptr,
-        nullptr,
         "qword ptr ",
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
         "xmmword ptr ",
-        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
         "ymmword ptr",
-        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
         "zmmword ptr"
     };
     // clang-format on
@@ -191,7 +174,7 @@ const char* CodeGen::genSizeStr(emitAttr attr)
 
     if (EA_ATTR(size) == attr)
     {
-        return sizes[size];
+        return sizes[size > 0 ? genLog2(size) + 1 : size];
     }
     else if (attr == EA_GCREF)
     {

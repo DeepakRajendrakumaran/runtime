@@ -7259,6 +7259,12 @@ GenTree* Compiler::gtNewAllBitsSetConNode(var_types type)
         case TYP_SIMD12:
         case TYP_SIMD16:
         case TYP_SIMD32:
+            allBitsSet                                 = gtNewVconNode(type);
+            allBitsSet->AsVecCon()->gtSimd64Val.i64[0] = -1;
+            allBitsSet->AsVecCon()->gtSimd64Val.i64[1] = -1;
+            allBitsSet->AsVecCon()->gtSimd64Val.i64[2] = -1;
+            allBitsSet->AsVecCon()->gtSimd64Val.i64[3] = -1;
+            break;
         case TYP_SIMD64:
             allBitsSet                                 = gtNewVconNode(type);
             allBitsSet->AsVecCon()->gtSimd64Val.i64[0] = -1;

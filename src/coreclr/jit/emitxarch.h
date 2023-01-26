@@ -708,7 +708,7 @@ inline emitter::opSize emitEncodeScale(size_t scale)
 {
     assert(scale == 1 || scale == 2 || scale == 4 || scale == 8);
 
-    return emitSizeEncode[scale - 1];
+    return emitSizeEncode[genLog2((unsigned int)scale)];
 }
 
 inline emitAttr emitDecodeScale(unsigned ensz)
