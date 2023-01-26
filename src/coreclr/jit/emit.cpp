@@ -6370,7 +6370,7 @@ unsigned emitter::emitEndCodeGen(Compiler* comp,
 
     coldCodeBlock = nullptr;
 
-    // This restricts the data alignment to: 4, 8, 16, or 32 bytes
+    // This restricts the data alignment to: 4, 8, 16, 32 or 64 bytes
     // Alignments greater than 32 would require VM support in ICorJitInfo::allocMem
     uint32_t dataAlignment = emitConsDsc.alignment;
     assert((dataSection::MIN_DATA_ALIGN <= dataAlignment) && (dataAlignment <= dataSection::MAX_DATA_ALIGN) &&

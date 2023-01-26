@@ -2573,7 +2573,7 @@ public:
 
     struct dataSection
     {
-        // Note to use alignments greater than 32 requires modification in the VM
+        // Note to use alignments greater than 64 requires modification in the VM
         // to support larger alignments (see ICorJitInfo::allocMem)
         //
         const static unsigned MIN_DATA_ALIGN = 4;

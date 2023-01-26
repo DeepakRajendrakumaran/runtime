@@ -599,24 +599,14 @@ void SetContainsAVX(bool value)
     containsAVXInstruction = value;
 }
 
-bool contains256bitAVXInstruction = false;
-bool Contains256bitAVX()
+bool contains256bitOrMoreAVXInstruction = false;
+bool Contains256bitOrMoreAVX()
 {
-    return contains256bitAVXInstruction;
+    return contains256bitOrMoreAVXInstruction;
 }
-void SetContains256bitAVX(bool value)
+void SetContains256bitOrMoreAVX(bool value)
 {
-    contains256bitAVXInstruction = value;
-}
-
-bool contains512bitAVXInstruction = false;
-bool Contains512bitAVX()
-{
-    return contains512bitAVXInstruction;
-}
-void SetContains512bitAVX(bool value)
-{
-    contains512bitAVXInstruction = value;
+    contains256bitOrMoreAVXInstruction = value;
 }
 
 bool IsDstDstSrcAVXInstruction(instruction ins);

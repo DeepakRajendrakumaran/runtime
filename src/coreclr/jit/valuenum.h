@@ -1619,7 +1619,6 @@ private:
         return m_simd32CnsMap;
     }
 
-    /////////////////deepak
     struct Simd64PrimitiveKeyFuncs : public JitKeyFuncsDefEquals<simd64_t>
     {
         static bool Equals(simd64_t x, simd64_t y)

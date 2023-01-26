@@ -504,9 +504,22 @@ void CodeGen::genSetRegToConst(regNumber targetReg, var_types targetType, GenTre
 
             if (vecCon->IsZero())
             {
-                if (((attr != EA_32BYTE) && (attr != EA_64BYTE)) ||
-                    ((attr == EA_32BYTE) && compiler->compOpportunisticallyDependsOn(InstructionSet_AVX)) ||
-                    ((attr == EA_64BYTE) && compiler->compOpportunisticallyDependsOn(InstructionSet_AVX512F)))
+                bool isSupported;
+
+                if (attr == EA_32BYTE)
+                {
+                    isSupported = compiler->compOpportunisticallyDependsOn(InstructionSet_AVX);
+                }
+                else if (attr == EA_64BYTE)
+                {
+                    isSupported = compiler->compOpportunisticallyDependsOn(InstructionSet_AVX512F);
+                }
+                else
+                {
+                    assert((attr == EA_8BYTE) || (attr == EA_16BYTE));
+                    isSupported = true;
+                }
+                if (isSupported)
                 {
 #if defined(FEATURE_SIMD)
                     emit->emitIns_SIMD_R_R_R(INS_xorps, attr, targetReg, targetReg, targetReg);
@@ -5714,11 +5727,9 @@ void CodeGen::genCall(GenTreeCall* call)
     // VZEROUPPER after PInvoke call because transition penalty from legacy SSE to AVX only happens
     // when there's preceding 256-bit AVX to legacy SSE transition penalty.
     // This applies to 512bit AVX512 instructions as well.
-    if (call->IsPInvoke() && (call->gtCallType == CT_USER_FUNC) &&
-        (GetEmitter()->Contains256bitAVX() || GetEmitter()->Contains512bitAVX()))
+    if (call->IsPInvoke() && (call->gtCallType == CT_USER_FUNC) && (GetEmitter()->Contains256bitOrMoreAVX()))
     {
-        assert((GetEmitter()->Contains256bitAVX() && compiler->canUseVexEncoding()) ||
-               (GetEmitter()->Contains512bitAVX() && compiler->canUseEvexEncoding()));
+        assert(GetEmitter()->Contains256bitOrMoreAVX() && compiler->canUseVexEncoding());
         instGen(INS_vzeroupper);
     }
 
@@ -10898,7 +10909,7 @@ void CodeGen::genVzeroupperIfNeeded(bool check256bitOnly /* = true*/)
     bool emitVzeroUpper = false;
     if (check256bitOnly)
     {
-        emitVzeroUpper = GetEmitter()->Contains256bitAVX() || GetEmitter()->Contains512bitAVX();
+        emitVzeroUpper = GetEmitter()->Contains256bitOrMoreAVX();
     }
     else
     {
@@ -10907,7 +10918,7 @@ void CodeGen::genVzeroupperIfNeeded(bool check256bitOnly /* = true*/)
 
     if (emitVzeroUpper)
     {
-        assert(compiler->canUseVexEncoding() || compiler->canUseEvexEncoding());
+        assert(compiler->canUseVexEncoding());
         instGen(INS_vzeroupper);
     }
 }

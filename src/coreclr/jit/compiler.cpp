@@ -2301,15 +2301,14 @@ void Compiler::compSetProcessor()
         if (canUseEvexEncoding())
         {
             codeGen->GetEmitter()->SetUseEvexEncoding(true);
-            // TODO-XArch-AVX512: Revisit other flags to be set once avx512 instructions are added.
+            // TODO-XArch-AVX512 : Revisit other flags to be set once avx512 instructions are added.
         }
         if (canUseVexEncoding())
         {
             codeGen->GetEmitter()->SetUseVEXEncoding(true);
             // Assume each JITted method does not contain AVX instruction at first
             codeGen->GetEmitter()->SetContainsAVX(false);
-            codeGen->GetEmitter()->SetContains256bitAVX(false);
-            codeGen->GetEmitter()->SetContains512bitAVX(false);
+            codeGen->GetEmitter()->SetContains256bitOrMoreAVX(false);
         }
     }
 #endif // TARGET_XARCH

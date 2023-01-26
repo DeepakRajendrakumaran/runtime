@@ -392,7 +392,7 @@ bool HWIntrinsicInfo::isFullyImplementedIsa(CORINFO_InstructionSet isa)
         case InstructionSet_SSE42_X64:
         case InstructionSet_Vector128:
         case InstructionSet_Vector256:
-        case InstructionSet_Vector512:
+        case InstructionSet_Vector512: // TODO-XArch-AVX512 : Not fully implemented currently.
         case InstructionSet_X86Base:
         case InstructionSet_X86Base_X64:
         case InstructionSet_X86Serialize:
@@ -512,10 +512,10 @@ GenTree* Compiler::impSpecialIntrinsic(NamedIntrinsic        intrinsic,
     CORINFO_InstructionSet isa = HWIntrinsicInfo::lookupIsa(intrinsic);
 
     if (((isa == InstructionSet_Vector256) && !compExactlyDependsOn(InstructionSet_AVX)) ||
-        ((isa == InstructionSet_Vector512) && !compExactlyDependsOn(InstructionSet_AVX512F) &&
+        (((isa == InstructionSet_Vector512) && !compExactlyDependsOn(InstructionSet_AVX512F)) ||
          !DoJitStressEvexEncoding()))
     {
-        // We don't want to deal with TYP_SIMD32 if the compiler doesn't otherwise support the type.
+        // We don't want to deal with TYP_SIMD32 or TYP_SIMD64 if the compiler doesn't otherwise support the type.
         return nullptr;
     }
 

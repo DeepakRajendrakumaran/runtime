@@ -8771,6 +8771,7 @@ private:
     unsigned getSIMDVectorRegisterByteLength()
     {
 #if defined(TARGET_XARCH)
+        // TODO-XArch-AVX512 : Return ZMM_REGSIZE_BYTES once Vector<T> supports AVX512.
         if (getSIMDSupportLevel() >= SIMD_AVX2_Supported)
         {
             return YMM_REGSIZE_BYTES;

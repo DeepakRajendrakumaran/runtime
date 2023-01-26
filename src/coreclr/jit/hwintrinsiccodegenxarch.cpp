@@ -386,7 +386,7 @@ void CodeGen::genHWIntrinsic(GenTreeHWIntrinsic* node)
         case InstructionSet_AVX:
         case InstructionSet_AVX2:
         case InstructionSet_AVX512F:
-            genAvxOrAvx2OrAvx512Intrinsic(node);
+            genAvxFamilyIntrinsic(node);
             break;
         case InstructionSet_AES:
             genAESIntrinsic(node);
@@ -1485,12 +1485,12 @@ void CodeGen::genSSE42Intrinsic(GenTreeHWIntrinsic* node)
 }
 
 //------------------------------------------------------------------------
-// genAvxOrAvx2Intrinsic: Generates the code for an AVX/AVX2 hardware intrinsic node
+// genAvxFamilyIntrinsic: Generates the code for an AVX/AVX2/AVX512 hardware intrinsic node
 //
 // Arguments:
 //    node - The hardware intrinsic node
 //
-void CodeGen::genAvxOrAvx2OrAvx512Intrinsic(GenTreeHWIntrinsic* node)
+void CodeGen::genAvxFamilyIntrinsic(GenTreeHWIntrinsic* node)
 {
     NamedIntrinsic intrinsicId = node->GetHWIntrinsicId();
     var_types      baseType    = node->GetSimdBaseType();

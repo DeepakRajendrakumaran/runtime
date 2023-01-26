@@ -17484,7 +17484,7 @@ bool GenTreeVecCon::IsHWIntrinsicCreateConstant(GenTreeHWIntrinsic* node, simd64
         case NI_Vector64_CreateScalarUnsafe:
 #endif
         {
-            // Zero out the simd32Val
+            // Zero out the simd64Val
             simd64Val = {};
 
             // These intrinsics are meant to set the same value to every element.
@@ -21163,7 +21163,7 @@ GenTree* Compiler::gtNewSimdCreateBroadcastNode(
     {
         hwIntrinsicID = NI_Vector512_Create;
     }
-    if (simdSize == 32)
+    else if (simdSize == 32)
     {
         hwIntrinsicID = NI_Vector256_Create;
     }
