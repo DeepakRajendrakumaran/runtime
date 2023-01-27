@@ -2282,7 +2282,15 @@ void Compiler::compSetProcessor()
     }
     if (instructionSetFlags.HasInstructionSet(InstructionSet_AVX512F))
     {
-        instructionSetFlags.AddInstructionSet(InstructionSet_Vector512);
+        if (!DoJitStressEvexEncoding())
+        {
+            instructionSetFlags.RemoveInstructionSet(InstructionSet_AVX512F);
+            instructionSetFlags = EnsureInstructionSetFlagsAreValid(instructionSetFlags);
+        }
+        else
+        {
+            instructionSetFlags.AddInstructionSet(InstructionSet_Vector512);
+        }
     }
 #elif defined(TARGET_ARM64)
     if (instructionSetFlags.HasInstructionSet(InstructionSet_AdvSimd))
