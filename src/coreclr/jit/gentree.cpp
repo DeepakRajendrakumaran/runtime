@@ -1326,7 +1326,7 @@ void CallArgABIInformation::SetMultiRegNums()
 #ifdef TARGET_ARM
     unsigned int regSize = (GetHfaType() == TYP_DOUBLE) ? 2 : 1;
 #else
-    unsigned int regSize = 1;
+    unsigned int regSize                               = 1;
 #endif
 
     if (NumRegs > MAX_ARG_REG_COUNT)
@@ -3011,7 +3011,7 @@ AGAIN:
 #ifdef HOST_64BIT
                 add = bits;
 #else // 32-bit host
-                add      = genTreeHashAdd(uhi32(bits), ulo32(bits));
+                add                                    = genTreeHashAdd(uhi32(bits), ulo32(bits));
 #endif
                 break;
             case GT_CNS_DBL:
@@ -3021,7 +3021,7 @@ AGAIN:
 #ifdef HOST_64BIT
                 add = bits;
 #else // 32-bit host
-                add      = genTreeHashAdd(uhi32(bits), ulo32(bits));
+                add                                    = genTreeHashAdd(uhi32(bits), ulo32(bits));
 #endif
                 break;
             }
@@ -3037,6 +3037,7 @@ AGAIN:
                 switch (vecCon->TypeGet())
                 {
 #if defined(FEATURE_SIMD)
+#ifdef TARGET_AMD64
                     case TYP_SIMD64:
                     {
                         add = genTreeHashAdd(ulo32(add), vecCon->gtSimd64Val.u32[15]);
@@ -3049,6 +3050,7 @@ AGAIN:
                         add = genTreeHashAdd(ulo32(add), vecCon->gtSimd64Val.u32[8]);
                         FALLTHROUGH;
                     }
+#endif // TARGET_AMD64
 
                     case TYP_SIMD32:
                     {
@@ -7213,7 +7215,7 @@ GenTree* Compiler::gtNewLconNode(__int64 value)
 #ifdef TARGET_64BIT
     GenTree* node = new (this, GT_CNS_INT) GenTreeIntCon(TYP_LONG, value);
 #else
-    GenTree* node = new (this, GT_CNS_LNG) GenTreeLngCon(value);
+    GenTree* node                   = new (this, GT_CNS_LNG) GenTreeLngCon(value);
 #endif
 
     return node;
@@ -7259,7 +7261,14 @@ GenTree* Compiler::gtNewAllBitsSetConNode(var_types type)
         case TYP_SIMD12:
         case TYP_SIMD16:
         case TYP_SIMD32:
-            allBitsSet                                 = gtNewVconNode(type);
+            allBitsSet = gtNewVconNode(type);
+#ifndef TARGET_AMD64
+            allBitsSet->AsVecCon()->gtSimd32Val.i64[0] = -1;
+            allBitsSet->AsVecCon()->gtSimd32Val.i64[1] = -1;
+            allBitsSet->AsVecCon()->gtSimd32Val.i64[2] = -1;
+            allBitsSet->AsVecCon()->gtSimd32Val.i64[3] = -1;
+            break;
+#else  // TARGET_AMD64
             allBitsSet->AsVecCon()->gtSimd64Val.i64[0] = -1;
             allBitsSet->AsVecCon()->gtSimd64Val.i64[1] = -1;
             allBitsSet->AsVecCon()->gtSimd64Val.i64[2] = -1;
@@ -7276,6 +7285,7 @@ GenTree* Compiler::gtNewAllBitsSetConNode(var_types type)
             allBitsSet->AsVecCon()->gtSimd64Val.i64[6] = -1;
             allBitsSet->AsVecCon()->gtSimd64Val.i64[7] = -1;
             break;
+#endif // !TARGET_AMD64
 #endif // FEATURE_SIMD
 
         default:
@@ -7313,8 +7323,12 @@ GenTree* Compiler::gtNewZeroConNode(var_types type)
         case TYP_SIMD32:
         case TYP_SIMD64:
         {
-            zero                          = gtNewVconNode(type);
+            zero = gtNewVconNode(type);
+#ifdef TARGET_AMD64
             zero->AsVecCon()->gtSimd64Val = {};
+#else
+            zero->AsVecCon()->gtSimd32Val              = {};
+#endif // TARGET_AMD64
             break;
         }
 #endif // FEATURE_SIMD
@@ -7366,7 +7380,11 @@ GenTree* Compiler::gtNewOneConNode(var_types type, var_types simdBaseType /* = T
                 {
                     for (uint32_t index = 0; index < simdLength; index++)
                     {
+#ifdef TARGET_AMD64
                         vecCon->gtSimd64Val.u8[index] = 1;
+#else
+                        vecCon->gtSimd32Val.u8[index]  = 1;
+#endif // TARGET_AMD64
                     }
                     break;
                 }
@@ -7376,7 +7394,11 @@ GenTree* Compiler::gtNewOneConNode(var_types type, var_types simdBaseType /* = T
                 {
                     for (uint32_t index = 0; index < simdLength; index++)
                     {
+#ifdef TARGET_AMD64
                         vecCon->gtSimd64Val.u16[index] = 1;
+#else
+                        vecCon->gtSimd32Val.u16[index] = 1;
+#endif // TARGET_AMD64
                     }
                     break;
                 }
@@ -7386,7 +7408,11 @@ GenTree* Compiler::gtNewOneConNode(var_types type, var_types simdBaseType /* = T
                 {
                     for (uint32_t index = 0; index < simdLength; index++)
                     {
+#ifdef TARGET_AMD64
                         vecCon->gtSimd64Val.u32[index] = 1;
+#else
+                        vecCon->gtSimd32Val.u32[index] = 1;
+#endif // TARGET_AMD64
                     }
                     break;
                 }
@@ -7396,7 +7422,11 @@ GenTree* Compiler::gtNewOneConNode(var_types type, var_types simdBaseType /* = T
                 {
                     for (uint32_t index = 0; index < simdLength; index++)
                     {
+#ifdef TARGET_AMD64
                         vecCon->gtSimd64Val.u64[index] = 1;
+#else
+                        vecCon->gtSimd32Val.u64[index] = 1;
+#endif // TARGET_AMD64
                     }
                     break;
                 }
@@ -7405,7 +7435,11 @@ GenTree* Compiler::gtNewOneConNode(var_types type, var_types simdBaseType /* = T
                 {
                     for (uint32_t index = 0; index < simdLength; index++)
                     {
+#ifdef TARGET_AMD64
                         vecCon->gtSimd64Val.f32[index] = 1.0f;
+#else
+                        vecCon->gtSimd32Val.f32[index] = 1.0f;
+#endif // TARGET_AMD64
                     }
                     break;
                 }
@@ -7414,7 +7448,11 @@ GenTree* Compiler::gtNewOneConNode(var_types type, var_types simdBaseType /* = T
                 {
                     for (uint32_t index = 0; index < simdLength; index++)
                     {
+#ifdef TARGET_AMD64
                         vecCon->gtSimd64Val.f64[index] = 1.0;
+#else
+                        vecCon->gtSimd32Val.f64[index] = 1.0;
+#endif // TARGET_AMD64
                     }
                     break;
                 }
@@ -8237,7 +8275,7 @@ GenTree* Compiler::gtNewPutArgReg(var_types type, GenTree* arg, regNumber argReg
         node->AsMultiRegOp()->gtOtherReg = REG_NEXT(argReg);
     }
 #else
-    node          = gtNewOperNode(GT_PUTARG_REG, type, arg);
+    node                            = gtNewOperNode(GT_PUTARG_REG, type, arg);
 #endif
     node->SetRegNum(argReg);
 
@@ -8268,7 +8306,7 @@ GenTree* Compiler::gtNewBitCastNode(var_types type, GenTree* arg)
     // A BITCAST could be a MultiRegOp on arm since we could move a double register to two int registers.
     node = new (this, GT_BITCAST) GenTreeMultiRegOp(GT_BITCAST, type, arg, nullptr);
 #else
-    node          = gtNewOperNode(GT_BITCAST, type, arg);
+    node                            = gtNewOperNode(GT_BITCAST, type, arg);
 #endif
 
     return node;
@@ -8398,8 +8436,12 @@ GenTree* Compiler::gtClone(GenTree* tree, bool complexOK)
         case GT_CNS_VEC:
         {
             GenTreeVecCon* vecCon = gtNewVconNode(tree->TypeGet());
-            vecCon->gtSimd64Val   = tree->AsVecCon()->gtSimd64Val;
-            copy                  = vecCon;
+#ifdef TARGET_AMD64
+            vecCon->gtSimd64Val = tree->AsVecCon()->gtSimd64Val;
+#else
+            vecCon->gtSimd32Val     = tree->AsVecCon()->gtSimd32Val;
+#endif // TARGET_AMD64
+            copy = vecCon;
             break;
         }
 
@@ -8581,8 +8623,12 @@ GenTree* Compiler::gtCloneExpr(
             case GT_CNS_VEC:
             {
                 GenTreeVecCon* vecCon = gtNewVconNode(tree->TypeGet());
-                vecCon->gtSimd64Val   = tree->AsVecCon()->gtSimd64Val;
-                copy                  = vecCon;
+#ifdef TARGET_AMD64
+                vecCon->gtSimd64Val = tree->AsVecCon()->gtSimd64Val;
+#else
+                vecCon->gtSimd32Val = tree->AsVecCon()->gtSimd32Val;
+#endif // TARGET_AMD64
+                copy = vecCon;
                 goto DONE;
             }
 
@@ -11563,6 +11609,7 @@ void Compiler::gtDispConst(GenTree* tree)
                     break;
                 }
 
+#ifdef TARGET_AMD64
                 case TYP_SIMD64:
                 {
                     simd64_t simdVal = vecCon->gtSimd64Val;
@@ -11571,6 +11618,7 @@ void Compiler::gtDispConst(GenTree* tree)
                            simdVal.u64[5], simdVal.u64[6], simdVal.u64[7]);
                     break;
                 }
+#endif // TARGET_AMD64
 #endif // FEATURE_SIMD
 
                 default:
@@ -17464,7 +17512,11 @@ bool GenTreeIntConCommon::AddrNeedsReloc(Compiler* comp)
 //
 //  Returns:
 //     true if node represents a constant; otherwise, false
-bool GenTreeVecCon::IsHWIntrinsicCreateConstant(GenTreeHWIntrinsic* node, simd64_t& simd64Val)
+#if defined(TARGET_AMD64)
+bool GenTreeVecCon::IsHWIntrinsicCreateConstant(GenTreeHWIntrinsic* node, simd64_t& simdVal)
+#else
+bool GenTreeVecCon::IsHWIntrinsicCreateConstant(GenTreeHWIntrinsic* node, simd32_t& simdVal)
+#endif // TARGET_AMD64
 {
     NamedIntrinsic intrinsic    = node->GetHWIntrinsicId();
     var_types      simdType     = node->TypeGet();
@@ -17490,11 +17542,11 @@ bool GenTreeVecCon::IsHWIntrinsicCreateConstant(GenTreeHWIntrinsic* node, simd64
         case NI_Vector64_CreateScalarUnsafe:
 #endif
         {
-            // Zero out the simd64Val
-            simd64Val = {};
+            // Zero out the simdVal
+            simdVal = {};
 
             // These intrinsics are meant to set the same value to every element.
-            if ((argCnt == 1) && HandleArgForHWIntrinsicCreate(node->Op(1), 0, simd64Val, simdBaseType))
+            if ((argCnt == 1) && HandleArgForHWIntrinsicCreate(node->Op(1), 0, simdVal, simdBaseType))
             {
 // CreateScalar leaves the upper bits as zero
 
@@ -17507,7 +17559,7 @@ bool GenTreeVecCon::IsHWIntrinsicCreateConstant(GenTreeHWIntrinsic* node, simd64
                     // Now assign the rest of the arguments.
                     for (unsigned i = 1; i < simdSize / genTypeSize(simdBaseType); i++)
                     {
-                        HandleArgForHWIntrinsicCreate(node->Op(1), i, simd64Val, simdBaseType);
+                        HandleArgForHWIntrinsicCreate(node->Op(1), i, simdVal, simdBaseType);
                     }
                 }
 
@@ -17517,7 +17569,7 @@ bool GenTreeVecCon::IsHWIntrinsicCreateConstant(GenTreeHWIntrinsic* node, simd64
             {
                 for (unsigned i = 1; i <= argCnt; i++)
                 {
-                    if (HandleArgForHWIntrinsicCreate(node->Op(i), i - 1, simd64Val, simdBaseType))
+                    if (HandleArgForHWIntrinsicCreate(node->Op(i), i - 1, simdVal, simdBaseType))
                     {
                         cnsArgCnt++;
                     }
@@ -17541,12 +17593,16 @@ bool GenTreeVecCon::IsHWIntrinsicCreateConstant(GenTreeHWIntrinsic* node, simd64
 //  Arguments:
 //     arg       - The argument to process
 //     argIdx    - The index of the argument being processed
-//     simd32Val - The vector constant being constructed
+//     simdVal - The vector constant being constructed
 //     baseType  - The base type of the vector constant
 //
 //  Returns:
 //     true if arg was a constant; otherwise, false
-bool GenTreeVecCon::HandleArgForHWIntrinsicCreate(GenTree* arg, int argIdx, simd64_t& simd64Val, var_types baseType)
+#if defined(TARGET_AMD64)
+bool GenTreeVecCon::HandleArgForHWIntrinsicCreate(GenTree* arg, int argIdx, simd64_t& simdVal, var_types baseType)
+#else
+bool GenTreeVecCon::HandleArgForHWIntrinsicCreate(GenTree* arg, int argIdx, simd32_t& simdVal, var_types baseType)
+#endif // TARGET_AMD64
 {
     switch (baseType)
     {
@@ -17555,13 +17611,13 @@ bool GenTreeVecCon::HandleArgForHWIntrinsicCreate(GenTree* arg, int argIdx, simd
         {
             if (arg->IsCnsIntOrI())
             {
-                simd64Val.i8[argIdx] = static_cast<int8_t>(arg->AsIntCon()->gtIconVal);
+                simdVal.i8[argIdx] = static_cast<int8_t>(arg->AsIntCon()->gtIconVal);
                 return true;
             }
             else
             {
                 // We expect the constant to have been already zeroed
-                assert(simd64Val.i8[argIdx] == 0);
+                assert(simdVal.i8[argIdx] == 0);
             }
             break;
         }
@@ -17571,13 +17627,13 @@ bool GenTreeVecCon::HandleArgForHWIntrinsicCreate(GenTree* arg, int argIdx, simd
         {
             if (arg->IsCnsIntOrI())
             {
-                simd64Val.i16[argIdx] = static_cast<int16_t>(arg->AsIntCon()->gtIconVal);
+                simdVal.i16[argIdx] = static_cast<int16_t>(arg->AsIntCon()->gtIconVal);
                 return true;
             }
             else
             {
                 // We expect the constant to have been already zeroed
-                assert(simd64Val.i16[argIdx] == 0);
+                assert(simdVal.i16[argIdx] == 0);
             }
             break;
         }
@@ -17587,13 +17643,13 @@ bool GenTreeVecCon::HandleArgForHWIntrinsicCreate(GenTree* arg, int argIdx, simd
         {
             if (arg->IsCnsIntOrI())
             {
-                simd64Val.i32[argIdx] = static_cast<int32_t>(arg->AsIntCon()->gtIconVal);
+                simdVal.i32[argIdx] = static_cast<int32_t>(arg->AsIntCon()->gtIconVal);
                 return true;
             }
             else
             {
                 // We expect the constant to have been already zeroed
-                assert(simd64Val.i32[argIdx] == 0);
+                assert(simdVal.i32[argIdx] == 0);
             }
             break;
         }
@@ -17604,7 +17660,7 @@ bool GenTreeVecCon::HandleArgForHWIntrinsicCreate(GenTree* arg, int argIdx, simd
 #if defined(TARGET_64BIT)
             if (arg->IsCnsIntOrI())
             {
-                simd64Val.i64[argIdx] = static_cast<int64_t>(arg->AsIntCon()->gtIconVal);
+                simdVal.i64[argIdx] = static_cast<int64_t>(arg->AsIntCon()->gtIconVal);
                 return true;
             }
 #else
@@ -17617,14 +17673,14 @@ bool GenTreeVecCon::HandleArgForHWIntrinsicCreate(GenTree* arg, int argIdx, simd
                 gtLconVal <<= 32;
                 gtLconVal |= arg->AsOp()->gtOp1->AsIntCon()->gtIconVal;
 
-                simd64Val.i64[argIdx] = gtLconVal;
+                simdVal.i64[argIdx] = gtLconVal;
                 return true;
             }
 #endif // TARGET_64BIT
             else
             {
                 // We expect the constant to have been already zeroed
-                assert(simd64Val.i64[argIdx] == 0);
+                assert(simdVal.i64[argIdx] == 0);
             }
             break;
         }
@@ -17633,14 +17689,14 @@ bool GenTreeVecCon::HandleArgForHWIntrinsicCreate(GenTree* arg, int argIdx, simd
         {
             if (arg->IsCnsFltOrDbl())
             {
-                simd64Val.f32[argIdx] = static_cast<float>(arg->AsDblCon()->DconValue());
+                simdVal.f32[argIdx] = static_cast<float>(arg->AsDblCon()->DconValue());
                 return true;
             }
             else
             {
                 // We expect the constant to have been already zeroed
                 // We check against the i32, rather than f32, to account for -0.0
-                assert(simd64Val.i32[argIdx] == 0);
+                assert(simdVal.i32[argIdx] == 0);
             }
             break;
         }
@@ -17649,14 +17705,14 @@ bool GenTreeVecCon::HandleArgForHWIntrinsicCreate(GenTree* arg, int argIdx, simd
         {
             if (arg->IsCnsFltOrDbl())
             {
-                simd64Val.f64[argIdx] = static_cast<double>(arg->AsDblCon()->DconValue());
+                simdVal.f64[argIdx] = static_cast<double>(arg->AsDblCon()->DconValue());
                 return true;
             }
             else
             {
                 // We expect the constant to have been already zeroed
                 // We check against the i64, rather than f64, to account for -0.0
-                assert(simd64Val.i64[argIdx] == 0);
+                assert(simdVal.i64[argIdx] == 0);
             }
             break;
         }
@@ -19276,10 +19332,13 @@ GenTree* Compiler::gtNewSimdAbsNode(
         {
             for (unsigned i = 0; i < (simdSize / 4); i++)
             {
-                // This is -0.0f. We use the bit pattern to avoid
-                // compiler issues on some platforms.
-
+// This is -0.0f. We use the bit pattern to avoid
+// compiler issues on some platforms.
+#ifdef TARGET_AMD64
                 bitMask->gtSimd64Val.u32[i] = 0x80000000;
+#else
+                bitMask->gtSimd32Val.u32[i]     = 0x80000000;
+#endif // TARGET_AMD64
             }
         }
         else
@@ -19288,10 +19347,13 @@ GenTree* Compiler::gtNewSimdAbsNode(
 
             for (unsigned i = 0; i < (simdSize / 8); i++)
             {
-                // This is -0.0. We use the bit pattern to avoid
-                // compiler issues on some platforms.
-
+// This is -0.0. We use the bit pattern to avoid
+// compiler issues on some platforms.
+#ifdef TARGET_AMD64
                 bitMask->gtSimd64Val.u64[i] = 0x8000000000000000;
+#else
+                bitMask->gtSimd32Val.u64[i]     = 0x8000000000000000;
+#endif // TARGET_AMD64
             }
         }
 
@@ -20332,11 +20394,19 @@ GenTree* Compiler::gtNewSimdCmpOpNode(genTreeOps  op,
 
                 for (unsigned i = 0; i < (simdSize / 8); i++)
                 {
+#ifdef TARGET_AMD64
                     vecCon1->gtSimd64Val.u64[i] = constVal;
+#else
+                    vecCon1->gtSimd32Val.u64[i] = constVal;
+#endif // TARGET_AMD64
                 }
 
                 GenTreeVecCon* vecCon2 = gtNewVconNode(type);
-                vecCon2->gtSimd64Val   = vecCon1->gtSimd64Val;
+#ifdef TARGET_AMD64
+                vecCon2->gtSimd64Val = vecCon1->gtSimd64Val;
+#else
+                vecCon2->gtSimd32Val            = vecCon1->gtSimd32Val;
+#endif // TARGET_AMD64
 
                 // op1 = op1 - constVector
                 op1 = gtNewSimdBinOpNode(GT_SUB, type, op1, vecCon1, opJitType, simdSize, isSimdAsHWIntrinsic);
@@ -20564,11 +20634,19 @@ GenTree* Compiler::gtNewSimdCmpOpNode(genTreeOps  op,
 
                 for (unsigned i = 0; i < (simdSize / 8); i++)
                 {
+#ifdef TARGET_AMD64
                     vecCon1->gtSimd64Val.u64[i] = constVal;
+#else
+                    vecCon1->gtSimd32Val.u64[i] = constVal;
+#endif // TARGET_AMD64
                 }
 
                 GenTreeVecCon* vecCon2 = gtNewVconNode(type);
-                vecCon2->gtSimd64Val   = vecCon1->gtSimd64Val;
+#ifdef TARGET_AMD64
+                vecCon2->gtSimd64Val = vecCon1->gtSimd64Val;
+#else
+                vecCon2->gtSimd32Val            = vecCon1->gtSimd32Val;
+#endif // TARGET_AMD64
 
                 // op1 = op1 - constVector
                 op1 = gtNewSimdBinOpNode(GT_SUB, type, op1, vecCon1, opJitType, simdSize, isSimdAsHWIntrinsic);
@@ -21082,7 +21160,11 @@ GenTree* Compiler::gtNewSimdCreateBroadcastNode(
 
                 for (unsigned i = 0; i < simdSize; i++)
                 {
+#ifdef TARGET_AMD64
                     vecCon->gtSimd64Val.u8[i] = cnsVal;
+#else
+                    vecCon->gtSimd32Val.u8[i]  = cnsVal;
+#endif // TARGET_AMD64
                 }
                 break;
             }
@@ -21094,7 +21176,11 @@ GenTree* Compiler::gtNewSimdCreateBroadcastNode(
 
                 for (unsigned i = 0; i < (simdSize / 2); i++)
                 {
+#ifdef TARGET_AMD64
                     vecCon->gtSimd64Val.u16[i] = cnsVal;
+#else
+                    vecCon->gtSimd32Val.u16[i] = cnsVal;
+#endif // TARGET_AMD64
                 }
                 break;
             }
@@ -21106,7 +21192,11 @@ GenTree* Compiler::gtNewSimdCreateBroadcastNode(
 
                 for (unsigned i = 0; i < (simdSize / 4); i++)
                 {
+#ifdef TARGET_AMD64
                     vecCon->gtSimd64Val.u32[i] = cnsVal;
+#else
+                    vecCon->gtSimd32Val.u32[i] = cnsVal;
+#endif // TARGET_AMD64
                 }
                 break;
             }
@@ -21118,7 +21208,11 @@ GenTree* Compiler::gtNewSimdCreateBroadcastNode(
 
                 for (unsigned i = 0; i < (simdSize / 8); i++)
                 {
+#ifdef TARGET_AMD64
                     vecCon->gtSimd64Val.u64[i] = cnsVal;
+#else
+                    vecCon->gtSimd32Val.u64[i] = cnsVal;
+#endif // TARGET_AMD64
                 }
                 break;
             }
@@ -21129,7 +21223,11 @@ GenTree* Compiler::gtNewSimdCreateBroadcastNode(
 
                 for (unsigned i = 0; i < (simdSize / 4); i++)
                 {
+#ifdef TARGET_AMD64
                     vecCon->gtSimd64Val.f32[i] = cnsVal;
+#else
+                    vecCon->gtSimd32Val.f32[i] = cnsVal;
+#endif // TARGET_AMD64
                 }
                 break;
             }
@@ -21140,7 +21238,11 @@ GenTree* Compiler::gtNewSimdCreateBroadcastNode(
 
                 for (unsigned i = 0; i < (simdSize / 8); i++)
                 {
+#ifdef TARGET_AMD64
                     vecCon->gtSimd64Val.f64[i] = cnsVal;
+#else
+                    vecCon->gtSimd32Val.f64[i] = cnsVal;
+#endif // TARGET_AMD64
                 }
                 break;
             }
@@ -21207,53 +21309,81 @@ GenTree* Compiler::gtNewSimdCreateScalarNode(
     if (op1->IsIntegralConst() || op1->IsCnsFltOrDbl())
     {
         GenTreeVecCon* vecCon = gtNewVconNode(type);
-        vecCon->gtSimd64Val   = {};
+#ifdef TARGET_AMD64
+        vecCon->gtSimd64Val = {};
+#else
+        vecCon->gtSimd32Val                = {};
+#endif // TARGET_AMD64
 
         switch (simdBaseType)
         {
             case TYP_BYTE:
             case TYP_UBYTE:
             {
-                uint8_t cnsVal            = static_cast<uint8_t>(op1->AsIntConCommon()->IntegralValue());
+                uint8_t cnsVal = static_cast<uint8_t>(op1->AsIntConCommon()->IntegralValue());
+#ifdef TARGET_AMD64
                 vecCon->gtSimd64Val.u8[0] = cnsVal;
+#else
+                vecCon->gtSimd32Val.u8[0]  = cnsVal;
+#endif // TARGET_AMD64
                 break;
             }
 
             case TYP_SHORT:
             case TYP_USHORT:
             {
-                uint16_t cnsVal            = static_cast<uint16_t>(op1->AsIntConCommon()->IntegralValue());
+                uint16_t cnsVal = static_cast<uint16_t>(op1->AsIntConCommon()->IntegralValue());
+#ifdef TARGET_AMD64
                 vecCon->gtSimd64Val.u16[0] = cnsVal;
+#else
+                vecCon->gtSimd32Val.u16[0] = cnsVal;
+#endif // TARGET_AMD64
                 break;
             }
 
             case TYP_INT:
             case TYP_UINT:
             {
-                uint32_t cnsVal            = static_cast<uint32_t>(op1->AsIntConCommon()->IntegralValue());
+                uint32_t cnsVal = static_cast<uint32_t>(op1->AsIntConCommon()->IntegralValue());
+#ifdef TARGET_AMD64
                 vecCon->gtSimd64Val.u32[0] = cnsVal;
+#else
+                vecCon->gtSimd32Val.u32[0] = cnsVal;
+#endif // TARGET_AMD64
                 break;
             }
 
             case TYP_LONG:
             case TYP_ULONG:
             {
-                uint64_t cnsVal            = static_cast<uint64_t>(op1->AsIntConCommon()->IntegralValue());
+                uint64_t cnsVal = static_cast<uint64_t>(op1->AsIntConCommon()->IntegralValue());
+#ifdef TARGET_AMD64
                 vecCon->gtSimd64Val.u64[0] = cnsVal;
+#else
+                vecCon->gtSimd32Val.u64[0] = cnsVal;
+#endif // TARGET_AMD64
                 break;
             }
 
             case TYP_FLOAT:
             {
-                float cnsVal               = static_cast<float>(op1->AsDblCon()->DconValue());
+                float cnsVal = static_cast<float>(op1->AsDblCon()->DconValue());
+#ifdef TARGET_AMD64
                 vecCon->gtSimd64Val.f32[0] = cnsVal;
+#else
+                vecCon->gtSimd32Val.f32[0] = cnsVal;
+#endif // TARGET_AMD64
                 break;
             }
 
             case TYP_DOUBLE:
             {
-                double cnsVal              = static_cast<double>(op1->AsDblCon()->DconValue());
+                double cnsVal = static_cast<double>(op1->AsDblCon()->DconValue());
+#ifdef TARGET_AMD64
                 vecCon->gtSimd64Val.f64[0] = cnsVal;
+#else
+                vecCon->gtSimd32Val.f64[0] = cnsVal;
+#endif // TARGET_AMD64
                 break;
             }
 
@@ -21334,7 +21464,11 @@ GenTree* Compiler::gtNewSimdCreateScalarUnsafeNode(
 
                 for (unsigned i = 0; i < simdSize; i++)
                 {
+#ifdef TARGET_AMD64
                     vecCon->gtSimd64Val.u8[i] = cnsVal;
+#else
+                    vecCon->gtSimd32Val.u8[i]  = cnsVal;
+#endif // TARGET_AMD64
                 }
                 break;
             }
@@ -21346,7 +21480,11 @@ GenTree* Compiler::gtNewSimdCreateScalarUnsafeNode(
 
                 for (unsigned i = 0; i < (simdSize / 2); i++)
                 {
+#ifdef TARGET_AMD64
                     vecCon->gtSimd64Val.u16[i] = cnsVal;
+#else
+                    vecCon->gtSimd32Val.u16[i] = cnsVal;
+#endif // TARGET_AMD64
                 }
                 break;
             }
@@ -21358,7 +21496,11 @@ GenTree* Compiler::gtNewSimdCreateScalarUnsafeNode(
 
                 for (unsigned i = 0; i < (simdSize / 4); i++)
                 {
+#ifdef TARGET_AMD64
                     vecCon->gtSimd64Val.u32[i] = cnsVal;
+#else
+                    vecCon->gtSimd32Val.u32[i] = cnsVal;
+#endif // TARGET_AMD64
                 }
                 break;
             }
@@ -21370,7 +21512,11 @@ GenTree* Compiler::gtNewSimdCreateScalarUnsafeNode(
 
                 for (unsigned i = 0; i < (simdSize / 8); i++)
                 {
+#ifdef TARGET_AMD64
                     vecCon->gtSimd64Val.u64[i] = cnsVal;
+#else
+                    vecCon->gtSimd32Val.u64[i] = cnsVal;
+#endif // TARGET_AMD64
                 }
                 break;
             }
@@ -21381,7 +21527,11 @@ GenTree* Compiler::gtNewSimdCreateScalarUnsafeNode(
 
                 for (unsigned i = 0; i < (simdSize / 4); i++)
                 {
+#ifdef TARGET_AMD64
                     vecCon->gtSimd64Val.f32[i] = cnsVal;
+#else
+                    vecCon->gtSimd32Val.f32[i] = cnsVal;
+#endif // TARGET_AMD64
                 }
                 break;
             }
@@ -21392,7 +21542,11 @@ GenTree* Compiler::gtNewSimdCreateScalarUnsafeNode(
 
                 for (unsigned i = 0; i < (simdSize / 8); i++)
                 {
+#ifdef TARGET_AMD64
                     vecCon->gtSimd64Val.f64[i] = cnsVal;
+#else
+                    vecCon->gtSimd32Val.f64[i] = cnsVal;
+#endif // TARGET_AMD64
                 }
                 break;
             }
@@ -21863,14 +22017,26 @@ GenTree* Compiler::gtNewSimdMaxNode(var_types   type,
 
                 for (unsigned i = 0; i < (simdSize / 8); i++)
                 {
+#ifdef TARGET_AMD64
                     vecCon1->gtSimd64Val.u64[i] = constVal;
+#else
+                    vecCon1->gtSimd32Val.u64[i] = constVal;
+#endif // TARGET_AMD64
                 }
 
                 GenTreeVecCon* vecCon2 = gtNewVconNode(type);
-                vecCon2->gtSimd64Val   = vecCon1->gtSimd64Val;
+#ifdef TARGET_AMD64
+                vecCon2->gtSimd64Val = vecCon1->gtSimd64Val;
+#else
+                vecCon2->gtSimd32Val            = vecCon1->gtSimd32Val;
+#endif // TARGET_AMD64
 
                 GenTreeVecCon* vecCon3 = gtNewVconNode(type);
-                vecCon3->gtSimd64Val   = vecCon2->gtSimd64Val;
+#ifdef TARGET_AMD64
+                vecCon3->gtSimd64Val = vecCon2->gtSimd64Val;
+#else
+                vecCon3->gtSimd32Val            = vecCon2->gtSimd32Val;
+#endif // TARGET_AMD64
 
                 // op1 = op1 - constVector
                 // -or-
@@ -22199,11 +22365,19 @@ GenTree* Compiler::gtNewSimdNarrowNode(var_types   type,
 
                 for (unsigned i = 0; i < (simdSize / 8); i++)
                 {
+#ifdef TARGET_AMD64
                     vecCon1->gtSimd64Val.u64[i] = 0x00FF00FF00FF00FF;
+#else
+                    vecCon1->gtSimd32Val.u64[i] = 0x00FF00FF00FF00FF;
+#endif // TARGET_AMD64
                 }
 
                 GenTreeVecCon* vecCon2 = gtNewVconNode(type);
-                vecCon2->gtSimd64Val   = vecCon1->gtSimd64Val;
+#ifdef TARGET_AMD64
+                vecCon2->gtSimd64Val = vecCon1->gtSimd64Val;
+#else
+                vecCon2->gtSimd32Val            = vecCon1->gtSimd32Val;
+#endif // TARGET_AMD64
 
                 tmp1 = gtNewSimdHWIntrinsicNode(type, op1, vecCon1, NI_SSE2_And, simdBaseJitType, simdSize,
                                                 isSimdAsHWIntrinsic);
@@ -22243,11 +22417,19 @@ GenTree* Compiler::gtNewSimdNarrowNode(var_types   type,
 
                 for (unsigned i = 0; i < (simdSize / 8); i++)
                 {
+#ifdef TARGET_AMD64
                     vecCon1->gtSimd64Val.u64[i] = 0x0000FFFF0000FFFF;
+#else
+                    vecCon1->gtSimd32Val.u64[i] = 0x0000FFFF0000FFFF;
+#endif // TARGET_AMD64
                 }
 
                 GenTreeVecCon* vecCon2 = gtNewVconNode(type);
-                vecCon2->gtSimd64Val   = vecCon1->gtSimd64Val;
+#ifdef TARGET_AMD64
+                vecCon2->gtSimd64Val = vecCon1->gtSimd64Val;
+#else
+                vecCon2->gtSimd32Val            = vecCon1->gtSimd32Val;
+#endif // TARGET_AMD64
 
                 tmp1 = gtNewSimdHWIntrinsicNode(type, op1, vecCon1, NI_SSE2_And, simdBaseJitType, simdSize,
                                                 isSimdAsHWIntrinsic);

@@ -8443,8 +8443,10 @@ void Compiler::fgValueNumberTreeConst(GenTree* tree)
             tree->gtVNPair.SetBoth(vnStore->VNForSimd32Con(tree->AsVecCon()->gtSimd32Val));
             break;
 
+#if defined(TARGET_AMD64)
         case TYP_SIMD64:
             tree->gtVNPair.SetBoth(vnStore->VNForSimd64Con(tree->AsVecCon()->gtSimd64Val));
+#endif // TARGET_AMD64
             break;
 #endif // FEATURE_SIMD
 

@@ -567,6 +567,7 @@ void CodeGen::genSetRegToConst(regNumber targetReg, var_types targetType, GenTre
                     break;
                 }
 
+#ifdef TARGET_AMD64
                 case TYP_SIMD64:
                 {
                     simd64_t             constValue = vecCon->gtSimd64Val;
@@ -575,6 +576,7 @@ void CodeGen::genSetRegToConst(regNumber targetReg, var_types targetType, GenTre
                     emit->emitIns_R_C(ins_Load(targetType), attr, targetReg, hnd, 0);
                     break;
                 }
+#endif // TARGET_AMD64
 #endif // FEATURE_SIMD
 
                 default:

@@ -3231,7 +3231,7 @@ GenTree* Compiler::optVNConstantPropOnTree(BasicBlock* block, GenTree* tree)
             break;
         }
         break;
-
+#ifdef TARGET_AMD64
         case TYP_SIMD64:
         {
             simd64_t value = vnStore->ConstantValue<simd64_t>(vnCns);
@@ -3243,6 +3243,7 @@ GenTree* Compiler::optVNConstantPropOnTree(BasicBlock* block, GenTree* tree)
             break;
         }
         break;
+#endif // TARGET_AMD64
 
 #endif // FEATURE_SIMD
 

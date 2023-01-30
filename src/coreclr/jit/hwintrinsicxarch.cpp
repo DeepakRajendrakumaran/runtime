@@ -968,7 +968,11 @@ GenTree* Compiler::impSpecialIntrinsic(NamedIntrinsic        intrinsic,
                         for (uint32_t index = 0; index < sig->numArgs; index++)
                         {
                             cnsVal = static_cast<uint8_t>(impPopStack().val->AsIntConCommon()->IntegralValue());
+#if defined(TARGET_AMD64)
                             vecCon->gtSimd64Val.u8[simdLength - 1 - index] = cnsVal;
+#else
+                            vecCon->gtSimd32Val.u8[simdLength - 1 - index]  = cnsVal;
+#endif // TARGET_AMD64
                         }
                         break;
                     }
@@ -981,7 +985,11 @@ GenTree* Compiler::impSpecialIntrinsic(NamedIntrinsic        intrinsic,
                         for (uint32_t index = 0; index < sig->numArgs; index++)
                         {
                             cnsVal = static_cast<uint16_t>(impPopStack().val->AsIntConCommon()->IntegralValue());
+#if defined(TARGET_AMD64)
                             vecCon->gtSimd64Val.u16[simdLength - 1 - index] = cnsVal;
+#else
+                            vecCon->gtSimd32Val.u16[simdLength - 1 - index] = cnsVal;
+#endif // TARGET_AMD64
                         }
                         break;
                     }
@@ -994,7 +1002,11 @@ GenTree* Compiler::impSpecialIntrinsic(NamedIntrinsic        intrinsic,
                         for (uint32_t index = 0; index < sig->numArgs; index++)
                         {
                             cnsVal = static_cast<uint32_t>(impPopStack().val->AsIntConCommon()->IntegralValue());
+#if defined(TARGET_AMD64)
                             vecCon->gtSimd64Val.u32[simdLength - 1 - index] = cnsVal;
+#else
+                            vecCon->gtSimd32Val.u32[simdLength - 1 - index] = cnsVal;
+#endif // TARGET_AMD64
                         }
                         break;
                     }
@@ -1007,7 +1019,11 @@ GenTree* Compiler::impSpecialIntrinsic(NamedIntrinsic        intrinsic,
                         for (uint32_t index = 0; index < sig->numArgs; index++)
                         {
                             cnsVal = static_cast<uint64_t>(impPopStack().val->AsIntConCommon()->IntegralValue());
+#if defined(TARGET_AMD64)
                             vecCon->gtSimd64Val.u64[simdLength - 1 - index] = cnsVal;
+#else
+                            vecCon->gtSimd32Val.u64[simdLength - 1 - index] = cnsVal;
+#endif // TARGET_AMD64
                         }
                         break;
                     }
@@ -1019,7 +1035,11 @@ GenTree* Compiler::impSpecialIntrinsic(NamedIntrinsic        intrinsic,
                         for (uint32_t index = 0; index < sig->numArgs; index++)
                         {
                             cnsVal = static_cast<float>(impPopStack().val->AsDblCon()->DconValue());
+#if defined(TARGET_AMD64)
                             vecCon->gtSimd64Val.f32[simdLength - 1 - index] = cnsVal;
+#else
+                            vecCon->gtSimd32Val.f32[simdLength - 1 - index] = cnsVal;
+#endif // TARGET_AMD64
                         }
                         break;
                     }
@@ -1031,7 +1051,11 @@ GenTree* Compiler::impSpecialIntrinsic(NamedIntrinsic        intrinsic,
                         for (uint32_t index = 0; index < sig->numArgs; index++)
                         {
                             double cnsVal = static_cast<double>(impPopStack().val->AsDblCon()->DconValue());
+#if defined(TARGET_AMD64)
                             vecCon->gtSimd64Val.f64[simdLength - 1 - index] = cnsVal;
+#else
+                            vecCon->gtSimd32Val.f64[simdLength - 1 - index] = cnsVal;
+#endif // TARGET_AMD64
                         }
                         break;
                     }
@@ -1282,7 +1306,11 @@ GenTree* Compiler::impSpecialIntrinsic(NamedIntrinsic        intrinsic,
                     case TYP_SHORT:
                     case TYP_USHORT:
                     {
-                        simd64_t simd64Val = {};
+#if defined(TARGET_AMD64)
+                        simd64_t simdVal = {};
+#else
+                        simd32_t simdVal                                    = {};
+#endif // TARGET_AMD64
 
                         assert((simdSize == 16) || (simdSize == 32) || (simdSize == 64));
                         simdBaseJitType = varTypeIsUnsigned(simdBaseType) ? CORINFO_TYPE_UBYTE : CORINFO_TYPE_BYTE;
@@ -1292,15 +1320,15 @@ GenTree* Compiler::impSpecialIntrinsic(NamedIntrinsic        intrinsic,
                         //
                         // The most significant bit being set means zero the value
 
-                        simd64Val.u64[0] = 0x0F0D0B0907050301;
-                        simd64Val.u64[1] = 0x8080808080808080;
+                        simdVal.u64[0] = 0x0F0D0B0907050301;
+                        simdVal.u64[1] = 0x8080808080808080;
 
                         if (simdSize == 32)
                         {
                             // Vector256 works on 2x128-bit lanes, so repeat the same indices for the upper lane
 
-                            simd64Val.u64[2] = 0x0F0D0B0907050301;
-                            simd64Val.u64[3] = 0x8080808080808080;
+                            simdVal.u64[2] = 0x0F0D0B0907050301;
+                            simdVal.u64[3] = 0x8080808080808080;
 
                             shuffleIntrinsic  = NI_AVX2_Shuffle;
                             moveMaskIntrinsic = NI_AVX2_MoveMask;
@@ -1315,8 +1343,12 @@ GenTree* Compiler::impSpecialIntrinsic(NamedIntrinsic        intrinsic,
                             return nullptr;
                         }
 
-                        op2                          = gtNewVconNode(simdType);
-                        op2->AsVecCon()->gtSimd64Val = simd64Val;
+                        op2 = gtNewVconNode(simdType);
+#if defined(TARGET_AMD64)
+                        op2->AsVecCon()->gtSimd64Val = simdVal;
+#else
+                        op2->AsVecCon()->gtSimd32Val                        = simdVal;
+#endif
 
                         op1 = impSIMDPopStack(simdType);
                         op1 = gtNewSimdHWIntrinsicNode(simdType, op1, op2, shuffleIntrinsic, simdBaseJitType, simdSize);
