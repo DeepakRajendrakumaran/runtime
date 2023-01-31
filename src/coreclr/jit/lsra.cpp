@@ -683,7 +683,7 @@ LinearScan::LinearScan(Compiler* theCompiler)
             availableRegs[i] = &availableDoubleRegs;
         }
 #ifdef FEATURE_SIMD
-        else if ((thisType >= TYP_SIMD8) && (thisType <= TYP_SIMD32))
+        else if ((thisType >= TYP_SIMD8) && (thisType <= TYP_SIMD64))
         {
             availableRegs[i] = &availableDoubleRegs;
         }
@@ -1546,6 +1546,7 @@ bool LinearScan::isRegCandidate(LclVarDsc* varDsc)
         case TYP_SIMD12:
         case TYP_SIMD16:
         case TYP_SIMD32:
+        case TYP_SIMD64:
             return !varDsc->lvPromoted;
 #endif // FEATURE_SIMD
 

@@ -2280,6 +2280,10 @@ void Compiler::compSetProcessor()
     {
         instructionSetFlags.AddInstructionSet(InstructionSet_Vector256);
     }
+    if (instructionSetFlags.HasInstructionSet(InstructionSet_AVX512F))
+    {
+        instructionSetFlags.AddInstructionSet(InstructionSet_Vector512);
+    }
 #elif defined(TARGET_ARM64)
     if (instructionSetFlags.HasInstructionSet(InstructionSet_AdvSimd))
     {
@@ -2305,6 +2309,7 @@ void Compiler::compSetProcessor()
             // Assume each JITted method does not contain AVX instruction at first
             codeGen->GetEmitter()->SetContainsAVX(false);
             codeGen->GetEmitter()->SetContains256bitAVX(false);
+            codeGen->GetEmitter()->SetContains512bitAVX(false);
         }
     }
 #endif // TARGET_XARCH

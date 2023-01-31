@@ -609,6 +609,16 @@ void SetContains256bitAVX(bool value)
     contains256bitAVXInstruction = value;
 }
 
+bool contains512bitAVXInstruction = false;
+bool Contains512bitAVX()
+{
+    return contains512bitAVXInstruction;
+}
+void SetContains512bitAVX(bool value)
+{
+    contains512bitAVXInstruction = value;
+}
+
 bool IsDstDstSrcAVXInstruction(instruction ins);
 bool IsDstSrcSrcAVXInstruction(instruction ins);
 bool HasRegularWideForm(instruction ins);
@@ -646,6 +656,7 @@ void emitDispShift(instruction ins, int cnt = 0);
 
 const char* emitXMMregName(unsigned reg);
 const char* emitYMMregName(unsigned reg);
+const char* emitZMMregName(unsigned reg);
 
 /************************************************************************/
 /*  Private members that deal with target-dependent instr. descriptors  */

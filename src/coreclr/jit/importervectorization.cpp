@@ -74,7 +74,7 @@ static bool ConvertToLowerCase(WCHAR* input, WCHAR* mask, int length)
 //
 // Arguments:
 //    comp     - Compiler object
-//    simdType - Vector type, either TYP_SIMD32 (xarch only) or TYP_SIMD16
+//    simdType - Vector type, TYP_SIMD64 (xarch only), TYP_SIMD32 (xarch only) or TYP_SIMD16
 //    cns      - Constant data
 //
 // Return Value:
@@ -89,6 +89,14 @@ static GenTreeVecCon* CreateConstVector(Compiler* comp, var_types simdType, WCHA
         GenTreeVecCon* vecCon    = comp->gtNewVconNode(simdType);
 
         memcpy(&vecCon->gtSimd32Val, cns, sizeof(simd32_t));
+        return vecCon;
+    }
+    else if (simdType == TYP_SIMD64)
+    {
+        simd32_t       simd64Val = {};
+        GenTreeVecCon* vecCon    = comp->gtNewVconNode(simdType);
+
+        memcpy(&vecCon->gtSimd64Val, cns, sizeof(simd64_t));
         return vecCon;
     }
 #endif // TARGET_XARCH

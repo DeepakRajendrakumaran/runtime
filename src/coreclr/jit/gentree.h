@@ -3354,12 +3354,13 @@ struct GenTreeVecCon : public GenTree
         simd12_t gtSimd12Val;
         simd16_t gtSimd16Val;
         simd32_t gtSimd32Val;
+        simd64_t gtSimd64Val;
     };
 
 #if defined(FEATURE_HW_INTRINSICS)
-    static bool IsHWIntrinsicCreateConstant(GenTreeHWIntrinsic* node, simd32_t& simd32Val);
+    static bool IsHWIntrinsicCreateConstant(GenTreeHWIntrinsic* node, simd64_t& simd64Val);
 
-    static bool HandleArgForHWIntrinsicCreate(GenTree* arg, int argIdx, simd32_t& simd32Val, var_types baseType);
+    static bool HandleArgForHWIntrinsicCreate(GenTree* arg, int argIdx, simd64_t& simd64Val, var_types baseType);
 #endif // FEATURE_HW_INTRINSICS
 
     bool IsAllBitsSet() const
@@ -3387,6 +3388,14 @@ struct GenTreeVecCon : public GenTree
             {
                 return (gtSimd32Val.u64[0] == 0xFFFFFFFFFFFFFFFF) && (gtSimd32Val.u64[1] == 0xFFFFFFFFFFFFFFFF) &&
                        (gtSimd32Val.u64[2] == 0xFFFFFFFFFFFFFFFF) && (gtSimd32Val.u64[3] == 0xFFFFFFFFFFFFFFFF);
+            }
+
+            case TYP_SIMD64:
+            {
+                return (gtSimd64Val.u64[0] == 0xFFFFFFFFFFFFFFFF) && (gtSimd64Val.u64[1] == 0xFFFFFFFFFFFFFFFF) &&
+                       (gtSimd64Val.u64[2] == 0xFFFFFFFFFFFFFFFF) && (gtSimd64Val.u64[3] == 0xFFFFFFFFFFFFFFFF) &&
+                       (gtSimd64Val.u64[4] == 0xFFFFFFFFFFFFFFFF) && (gtSimd64Val.u64[5] == 0xFFFFFFFFFFFFFFFF) &&
+                       (gtSimd64Val.u64[6] == 0xFFFFFFFFFFFFFFFF) && (gtSimd64Val.u64[7] == 0xFFFFFFFFFFFFFFFF);
             }
 #endif // FEATURE_SIMD
 
@@ -3434,6 +3443,18 @@ struct GenTreeVecCon : public GenTree
                        (left->gtSimd32Val.u64[2] == right->gtSimd32Val.u64[2]) &&
                        (left->gtSimd32Val.u64[3] == right->gtSimd32Val.u64[3]);
             }
+
+            case TYP_SIMD64:
+            {
+                return (left->gtSimd64Val.u64[0] == right->gtSimd64Val.u64[0]) &&
+                       (left->gtSimd64Val.u64[1] == right->gtSimd64Val.u64[1]) &&
+                       (left->gtSimd64Val.u64[2] == right->gtSimd64Val.u64[2]) &&
+                       (left->gtSimd64Val.u64[3] == right->gtSimd64Val.u64[3]) &&
+                       (left->gtSimd64Val.u64[4] == right->gtSimd64Val.u64[4]) &&
+                       (left->gtSimd64Val.u64[5] == right->gtSimd64Val.u64[5]) &&
+                       (left->gtSimd64Val.u64[6] == right->gtSimd64Val.u64[6]) &&
+                       (left->gtSimd64Val.u64[7] == right->gtSimd64Val.u64[7]);
+            }
 #endif // FEATURE_SIMD
 
             default:
@@ -3468,6 +3489,14 @@ struct GenTreeVecCon : public GenTree
             {
                 return (gtSimd32Val.u64[0] == 0x0000000000000000) && (gtSimd32Val.u64[1] == 0x0000000000000000) &&
                        (gtSimd32Val.u64[2] == 0x0000000000000000) && (gtSimd32Val.u64[3] == 0x0000000000000000);
+            }
+
+            case TYP_SIMD64:
+            {
+                return (gtSimd64Val.u64[0] == 0x0000000000000000) && (gtSimd64Val.u64[1] == 0x0000000000000000) &&
+                       (gtSimd64Val.u64[2] == 0x0000000000000000) && (gtSimd64Val.u64[3] == 0x0000000000000000) &&
+                       (gtSimd64Val.u64[4] == 0x0000000000000000) && (gtSimd64Val.u64[5] == 0x0000000000000000) &&
+                       (gtSimd64Val.u64[6] == 0x0000000000000000) && (gtSimd64Val.u64[7] == 0x0000000000000000);
             }
 #endif // FEATURE_SIMD
 
@@ -8781,44 +8810,44 @@ inline uint64_t GenTree::GetIntegralVectorConstElement(size_t index, var_types s
         {
             case TYP_BYTE:
             {
-                return node->gtSimd32Val.i8[index];
+                return node->gtSimd64Val.i8[index];
             }
 
             case TYP_UBYTE:
             {
-                return node->gtSimd32Val.u8[index];
+                return node->gtSimd64Val.u8[index];
             }
 
             case TYP_SHORT:
             {
-                return node->gtSimd32Val.i16[index];
+                return node->gtSimd64Val.i16[index];
             }
 
             case TYP_USHORT:
             {
-                return node->gtSimd32Val.u16[index];
+                return node->gtSimd64Val.u16[index];
             }
 
             case TYP_INT:
             case TYP_FLOAT:
             {
-                return node->gtSimd32Val.i32[index];
+                return node->gtSimd64Val.i32[index];
             }
 
             case TYP_UINT:
             {
-                return node->gtSimd32Val.u32[index];
+                return node->gtSimd64Val.u32[index];
             }
 
             case TYP_LONG:
             case TYP_DOUBLE:
             {
-                return node->gtSimd32Val.i64[index];
+                return node->gtSimd64Val.i64[index];
             }
 
             case TYP_ULONG:
             {
-                return node->gtSimd32Val.u64[index];
+                return node->gtSimd64Val.u64[index];
             }
 
             default:

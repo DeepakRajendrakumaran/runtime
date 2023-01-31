@@ -176,13 +176,18 @@ const char* CodeGen::genSizeStr(emitAttr attr)
         "xmmword ptr ",
         nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
         nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-        "ymmword ptr"
+        "ymmword ptr",
+        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+        "zmmword ptr"
     };
     // clang-format on
 
     unsigned size = EA_SIZE(attr);
 
-    assert(size == 0 || size == 1 || size == 2 || size == 4 || size == 8 || size == 16 || size == 32);
+    assert(size == 0 || size == 1 || size == 2 || size == 4 || size == 8 || size == 16 || size == 32 || size == 64);
 
     if (EA_ATTR(size) == attr)
     {
@@ -806,6 +811,12 @@ CodeGen::OperandDesc CodeGen::genOperandDesc(GenTree* op)
                     {
                         simd32_t constValue = op->AsVecCon()->gtSimd32Val;
                         return OperandDesc(emit->emitSimd32Const(constValue));
+                    }
+
+                    case TYP_SIMD64:
+                    {
+                        simd64_t constValue = op->AsVecCon()->gtSimd64Val;
+                        return OperandDesc(emit->emitSimd64Const(constValue));
                     }
 #endif // FEATURE_SIMD
 

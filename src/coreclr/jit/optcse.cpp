@@ -2657,7 +2657,9 @@ public:
 
                 // If we have a SIMD32 that is live across a call we have even higher spill costs
                 //
-                if (candidate->Expr()->TypeGet() == TYP_SIMD32)
+                if ((candidate->Expr()->TypeGet() == TYP_SIMD32) ||
+                    (candidate->Expr()->TypeGet() == TYP_SIMD64)) // TODO-XArch-AVX512 : How does TYP_SIMD64 affect
+                                                                  // cost.
                 {
                     // Additionally for a simd32 CSE candidate we assume that and second spilled/restore will be needed.
                     // (to hold the upper half of the simd32 register that isn't preserved across the call)

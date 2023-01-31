@@ -3231,6 +3231,19 @@ GenTree* Compiler::optVNConstantPropOnTree(BasicBlock* block, GenTree* tree)
             break;
         }
         break;
+
+        case TYP_SIMD64:
+        {
+            simd64_t value = vnStore->ConstantValue<simd64_t>(vnCns);
+
+            GenTreeVecCon* vecCon = gtNewVconNode(tree->TypeGet());
+            vecCon->gtSimd64Val   = value;
+
+            conValTree = vecCon;
+            break;
+        }
+        break;
+
 #endif // FEATURE_SIMD
 
         case TYP_BYREF:

@@ -1085,7 +1085,7 @@ void Lowering::LowerHWIntrinsicFusedMultiplyAddScalar(GenTreeHWIntrinsic* node)
 //
 GenTree* Lowering::LowerHWIntrinsic(GenTreeHWIntrinsic* node)
 {
-    assert(node->TypeGet() != TYP_SIMD32);
+    assert((node->TypeGet() != TYP_SIMD32) && (node->TypeGet() != TYP_SIMD64));
 
     if (node->TypeGet() == TYP_SIMD12)
     {
@@ -1428,7 +1428,7 @@ GenTree* Lowering::LowerHWIntrinsicCreate(GenTreeHWIntrinsic* node)
     CorInfoType    simdBaseJitType = node->GetSimdBaseJitType();
     var_types      simdBaseType    = node->GetSimdBaseType();
     unsigned       simdSize        = node->GetSimdSize();
-    simd32_t       simd32Val       = {};
+    simd64_t       simd64Val       = {};
 
     if ((simdSize == 8) && (simdType == TYP_DOUBLE))
     {
@@ -1441,7 +1441,7 @@ GenTree* Lowering::LowerHWIntrinsicCreate(GenTreeHWIntrinsic* node)
     assert(varTypeIsArithmetic(simdBaseType));
     assert(simdSize != 0);
 
-    bool   isConstant     = GenTreeVecCon::IsHWIntrinsicCreateConstant(node, simd32Val);
+    bool   isConstant     = GenTreeVecCon::IsHWIntrinsicCreateConstant(node, simd64Val);
     bool   isCreateScalar = (intrinsicId == NI_Vector64_CreateScalar) || (intrinsicId == NI_Vector128_CreateScalar);
     size_t argCnt         = node->GetOperandCount();
 
@@ -1466,7 +1466,7 @@ GenTree* Lowering::LowerHWIntrinsicCreate(GenTreeHWIntrinsic* node)
 
         GenTreeVecCon* vecCon = comp->gtNewVconNode(simdType);
 
-        vecCon->gtSimd32Val = simd32Val;
+        vecCon->gtSimd64Val = simd64Val;
         BlockRange().InsertBefore(node, vecCon);
 
         LIR::Use use;

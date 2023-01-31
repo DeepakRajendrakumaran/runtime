@@ -1035,6 +1035,7 @@ GenTree* Lowering::LowerHWIntrinsic(GenTreeHWIntrinsic* node)
 
         case NI_Vector128_Create:
         case NI_Vector256_Create:
+        case NI_Vector512_Create:
         case NI_Vector128_CreateScalar:
         case NI_Vector256_CreateScalar:
         {
@@ -1893,7 +1894,7 @@ void Lowering::LowerHWIntrinsicCndSel(GenTreeHWIntrinsic* node)
 }
 
 //----------------------------------------------------------------------------------------------
-// Lowering::LowerHWIntrinsicCreate: Lowers a Vector128 or Vector256 Create call
+// Lowering::LowerHWIntrinsicCreate: Lowers a Vector128 or Vector256 or Vector512 Create call
 //
 //  Arguments:
 //     node - The hardware intrinsic node.
@@ -1905,7 +1906,7 @@ GenTree* Lowering::LowerHWIntrinsicCreate(GenTreeHWIntrinsic* node)
     CorInfoType    simdBaseJitType = node->GetSimdBaseJitType();
     var_types      simdBaseType    = node->GetSimdBaseType();
     unsigned       simdSize        = node->GetSimdSize();
-    simd32_t       simd32Val       = {};
+    simd64_t       simd64Val       = {};
 
     if ((simdSize == 8) && (simdType == TYP_DOUBLE))
     {
@@ -1927,13 +1928,13 @@ GenTree* Lowering::LowerHWIntrinsicCreate(GenTreeHWIntrinsic* node)
     GenTree* tmp2 = nullptr;
     GenTree* tmp3 = nullptr;
 
-    bool   isConstant     = GenTreeVecCon::IsHWIntrinsicCreateConstant(node, simd32Val);
+    bool   isConstant     = GenTreeVecCon::IsHWIntrinsicCreateConstant(node, simd64Val);
     bool   isCreateScalar = (intrinsicId == NI_Vector128_CreateScalar) || (intrinsicId == NI_Vector256_CreateScalar);
     size_t argCnt         = node->GetOperandCount();
 
     if (isConstant)
     {
-        assert((simdSize == 8) || (simdSize == 12) || (simdSize == 16) || (simdSize == 32));
+        assert((simdSize == 8) || (simdSize == 12) || (simdSize == 16) || (simdSize == 32) || (simdSize == 64));
 
         for (GenTree* arg : node->Operands())
         {
@@ -1949,7 +1950,7 @@ GenTree* Lowering::LowerHWIntrinsicCreate(GenTreeHWIntrinsic* node)
 
         GenTreeVecCon* vecCon = comp->gtNewVconNode(simdType);
 
-        vecCon->gtSimd32Val = simd32Val;
+        vecCon->gtSimd64Val = simd64Val;
         BlockRange().InsertBefore(node, vecCon);
 
         LIR::Use use;
@@ -2114,6 +2115,31 @@ GenTree* Lowering::LowerHWIntrinsicCreate(GenTreeHWIntrinsic* node)
 
                 node = tmp2->AsHWIntrinsic();
             }
+
+            return LowerNode(node);
+        }
+
+        // We have the following (where simd is simd16, simd32 or simd64):
+        //          /--*  op1  T
+        //   node = *  HWINTRINSIC   simd   T Create
+
+        if (intrinsicId == NI_Vector512_Create)
+        {
+            assert(comp->compIsaSupportedDebugOnly(InstructionSet_AVX512F));
+            // We will be constructing the following parts:
+            //          /--*  op1  T
+            //   tmp1 = *  HWINTRINSIC   simd32 T CreateScalarUnsafe
+            //          /--*  tmp1 simd16
+            //   node = *  HWINTRINSIC   simd64 T BroadcastScalarToVector512
+
+            // This is roughly the following managed code:
+            //   var tmp1 = Vector256.CreateScalarUnsafe(op1);
+            //   return Avx512.BroadcastScalarToVector512(tmp1);
+
+            tmp1 = InsertNewSimdCreateScalarUnsafeNode(TYP_SIMD16, op1, simdBaseJitType, 16);
+            LowerNode(tmp1);
+
+            node->ResetHWIntrinsicId(NI_AVX512F_BroadcastScalarToVector512, tmp1);
 
             return LowerNode(node);
         }
@@ -6536,6 +6562,7 @@ bool Lowering::IsContainableHWIntrinsicOp(GenTreeHWIntrinsic* parentNode, GenTre
 
                 case NI_AVX2_BroadcastScalarToVector128:
                 case NI_AVX2_BroadcastScalarToVector256:
+                case NI_AVX512F_BroadcastScalarToVector512:
                 {
                     if (!parentNode->OperIsMemoryLoad())
                     {
@@ -6874,6 +6901,7 @@ void Lowering::ContainCheckHWIntrinsic(GenTreeHWIntrinsic* node)
 
                     case NI_AVX2_BroadcastScalarToVector128:
                     case NI_AVX2_BroadcastScalarToVector256:
+                    case NI_AVX512F_BroadcastScalarToVector512:
                     {
                         if (node->OperIsMemoryLoad())
                         {
