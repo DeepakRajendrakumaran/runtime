@@ -1906,11 +1906,7 @@ GenTree* Lowering::LowerHWIntrinsicCreate(GenTreeHWIntrinsic* node)
     CorInfoType    simdBaseJitType = node->GetSimdBaseJitType();
     var_types      simdBaseType    = node->GetSimdBaseType();
     unsigned       simdSize        = node->GetSimdSize();
-#if defined(TARGET_AMD64)
-    simd64_t simdVal = {};
-#else
-    simd32_t simdVal                       = {};
-#endif // TARGET_AMD64
+    simd64_t       simd64Val       = {};
 
     if ((simdSize == 8) && (simdType == TYP_DOUBLE))
     {
@@ -1932,7 +1928,7 @@ GenTree* Lowering::LowerHWIntrinsicCreate(GenTreeHWIntrinsic* node)
     GenTree* tmp2 = nullptr;
     GenTree* tmp3 = nullptr;
 
-    bool   isConstant     = GenTreeVecCon::IsHWIntrinsicCreateConstant(node, simdVal);
+    bool   isConstant     = GenTreeVecCon::IsHWIntrinsicCreateConstant(node, simd64Val);
     bool   isCreateScalar = (intrinsicId == NI_Vector128_CreateScalar) || (intrinsicId == NI_Vector256_CreateScalar);
     size_t argCnt         = node->GetOperandCount();
 
@@ -1954,12 +1950,7 @@ GenTree* Lowering::LowerHWIntrinsicCreate(GenTreeHWIntrinsic* node)
 
         GenTreeVecCon* vecCon = comp->gtNewVconNode(simdType);
 
-#if defined(TARGET_AMD64)
-        vecCon->gtSimd64Val = simdVal;
-#else
-        vecCon->gtSimd32Val                = simdVal;
-#endif // TARGET_AMD64
-
+        vecCon->gtSimd64Val = simd64Val;
         BlockRange().InsertBefore(node, vecCon);
 
         LIR::Use use;

@@ -796,13 +796,11 @@ CodeGen::OperandDesc CodeGen::genOperandDesc(GenTree* op)
                         return OperandDesc(emit->emitSimd32Const(constValue));
                     }
 
-#if defined(TARGET_AMD64)
                     case TYP_SIMD64:
                     {
                         simd64_t constValue = op->AsVecCon()->gtSimd64Val;
                         return OperandDesc(emit->emitSimd64Const(constValue));
                     }
-#endif // TARGET_AMD64
 #endif // FEATURE_SIMD
 
                     default:

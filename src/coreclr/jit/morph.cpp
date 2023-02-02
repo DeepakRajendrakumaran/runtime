@@ -10723,13 +10723,9 @@ GenTree* Compiler::fgOptimizeHWIntrinsic(GenTreeHWIntrinsic* node)
         return node;
     }
 
-#if defined(TARGET_AMD64)
-    simd64_t simdVal = {};
-#else
-    simd32_t simdVal        = {};
-#endif // TARGET_AMD64
+    simd64_t simd64Val = {};
 
-    if (GenTreeVecCon::IsHWIntrinsicCreateConstant(node, simdVal))
+    if (GenTreeVecCon::IsHWIntrinsicCreateConstant(node, simd64Val))
     {
         GenTreeVecCon* vecCon = gtNewVconNode(node->TypeGet());
 
@@ -10738,11 +10734,7 @@ GenTree* Compiler::fgOptimizeHWIntrinsic(GenTreeHWIntrinsic* node)
             DEBUG_DESTROY_NODE(arg);
         }
 
-#if defined(TARGET_AMD64)
-        vecCon->gtSimd64Val = simdVal;
-#else
-        vecCon->gtSimd32Val = simdVal;
-#endif // TARGET_AMD64
+        vecCon->gtSimd64Val = simd64Val;
         INDEBUG(vecCon->gtDebugFlags |= GTF_DEBUG_NODE_MORPHED);
         return vecCon;
     }

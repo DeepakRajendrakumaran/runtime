@@ -474,7 +474,7 @@ void CodeGen::genSimdUpperRestore(GenTreeIntrinsic* node)
     assert(node->gtIntrinsicName == NI_SIMD_UpperRestore);
 
     GenTree* op1 = node->gtGetOp1();
-    assert(op1->IsLocal() && ((op1->TypeGet() == TYP_SIMD32) || (op1->TypeGet() == TYP_SIMD64)));
+    assert(op1->IsLocal() && op1->TypeGet() == TYP_SIMD32);
 
     regNumber srcReg    = node->GetRegNum();
     regNumber lclVarReg = genConsumeReg(op1);

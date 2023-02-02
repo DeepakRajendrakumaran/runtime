@@ -91,7 +91,6 @@ static GenTreeVecCon* CreateConstVector(Compiler* comp, var_types simdType, WCHA
         memcpy(&vecCon->gtSimd32Val, cns, sizeof(simd32_t));
         return vecCon;
     }
-#if defined(TARGET_AMD64)
     else if (simdType == TYP_SIMD64)
     {
         simd32_t       simd64Val = {};
@@ -100,7 +99,6 @@ static GenTreeVecCon* CreateConstVector(Compiler* comp, var_types simdType, WCHA
         memcpy(&vecCon->gtSimd64Val, cns, sizeof(simd64_t));
         return vecCon;
     }
-#endif // TARGET_AMD64
 #endif // TARGET_XARCH
 
     assert(simdType == TYP_SIMD16);
