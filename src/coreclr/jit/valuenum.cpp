@@ -7179,6 +7179,8 @@ ValueNum ValueNumStore::EvalHWIntrinsicFunBinary(var_types      type,
 #else
             case NI_SSE2_ShiftLeftLogical:
             case NI_AVX2_ShiftLeftLogical:
+            case NI_AVX512F_ShiftLeftLogical:
+            case NI_AVX512BW_ShiftLeftLogical:
 #endif
             {
                 return EvaluateBinarySimd(this, GT_LSH, /* scalar */ false, type, baseType, arg0VN, arg1VN);
@@ -7189,6 +7191,8 @@ ValueNum ValueNumStore::EvalHWIntrinsicFunBinary(var_types      type,
 #else
             case NI_SSE2_ShiftRightArithmetic:
             case NI_AVX2_ShiftRightArithmetic:
+            case NI_AVX512F_ShiftRightArithmetic:
+            case NI_AVX512BW_ShiftRightArithmetic:
 #endif
             {
                 return EvaluateBinarySimd(this, GT_RSH, /* scalar */ false, type, baseType, arg0VN, arg1VN);
@@ -7199,6 +7203,8 @@ ValueNum ValueNumStore::EvalHWIntrinsicFunBinary(var_types      type,
 #else
             case NI_SSE2_ShiftRightLogical:
             case NI_AVX2_ShiftRightLogical:
+            case NI_AVX512F_ShiftRightLogical:
+            case NI_AVX512BW_ShiftRightLogical:
 #endif
             {
                 return EvaluateBinarySimd(this, GT_RSZ, /* scalar */ false, type, baseType, arg0VN, arg1VN);
@@ -7470,6 +7476,12 @@ ValueNum ValueNumStore::EvalHWIntrinsicFunBinary(var_types      type,
             case NI_AVX2_ShiftLeftLogical:
             case NI_AVX2_ShiftRightArithmetic:
             case NI_AVX2_ShiftRightLogical:
+            case NI_AVX512F_ShiftLeftLogical:
+            case NI_AVX512F_ShiftRightArithmetic:
+            case NI_AVX512F_ShiftRightLogical:
+            case NI_AVX512BW_ShiftLeftLogical:
+            case NI_AVX512BW_ShiftRightArithmetic:
+            case NI_AVX512BW_ShiftRightLogical:
 #endif
             {
                 // Handle `x <<  0 == x` and `0 <<  x == 0`
