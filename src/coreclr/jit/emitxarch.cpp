@@ -18061,6 +18061,10 @@ emitter::insExecutionCharacteristics emitter::getInsExecutionCharacteristics(ins
         case INS_vpermpd:
         case INS_vpermd:
         case INS_vpermq:
+        case INS_vpermi2d:
+        case INS_vpermi2pd:
+        case INS_vpermi2ps:
+        case INS_vpermi2q:
         case INS_vperm2i128:
         case INS_vperm2f128:
         case INS_vextractf128:
@@ -18077,6 +18081,11 @@ emitter::insExecutionCharacteristics emitter::getInsExecutionCharacteristics(ins
         case INS_vinserti32x8:
             result.insThroughput = PERFSCORE_THROUGHPUT_1C;
             result.insLatency += PERFSCORE_LATENCY_3C;
+            break;
+
+        case INS_vpermi2w:
+            result.insThroughput = PERFSCORE_THROUGHPUT_2C;
+            result.insLatency += PERFSCORE_LATENCY_7C;
             break;
 
         case INS_pextrb:

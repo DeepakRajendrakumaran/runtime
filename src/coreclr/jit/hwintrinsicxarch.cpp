@@ -2170,9 +2170,10 @@ GenTree* Compiler::impSpecialIntrinsic(NamedIntrinsic        intrinsic,
 
         case NI_Vector128_Shuffle:
         case NI_Vector256_Shuffle:
+        case NI_Vector512_Shuffle:
         {
             assert((sig->numArgs == 2) || (sig->numArgs == 3));
-            assert((simdSize == 16) || (simdSize == 32));
+            assert((simdSize == 16) || (simdSize == 32) || (simdSize == 64));
 
             GenTree* indices = impStackTop(0).val;
 
@@ -2228,8 +2229,15 @@ GenTree* Compiler::impSpecialIntrinsic(NamedIntrinsic        intrinsic,
                     }
                 }
             }
-            else
+            else if (simdSize == 64)
             {
+                if (varTypeIsByte(simdBaseType))
+                {
+                    // TYP_BYTE, TYP_UBYTE requires AVX512_VBMI
+                    break;
+                }
+            }
+            else {
                 assert(simdSize == 16);
 
                 if (varTypeIsSmallInt(simdBaseType) && !compExactlyDependsOn(InstructionSet_SSSE3))

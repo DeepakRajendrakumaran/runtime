@@ -22964,6 +22964,25 @@ GenTree* Compiler::gtNewSimdShuffleNode(
             retNode = gtNewSimdHWIntrinsicNode(type, op1, cnsNode, NI_AVX2_Permute4x64, simdBaseJitType, simdSize);
         }
     }
+    else if (simdSize == 64)
+    {
+        for (uint32_t i = 0; i < elementCount; i++)
+        {
+            vecCns.u32[i] = (uint8_t)(vecCns.u8[i * elementSize] / elementSize);
+        }
+        op2                        = gtNewVconNode(type);
+        op2->AsVecCon()->gtSimdVal = vecCns;
+        if (varTypeIsShort(simdBaseType))
+        {
+            assert(compIsaSupportedDebugOnly(InstructionSet_AVX512BW));
+            retNode = gtNewSimdHWIntrinsicNode(type, op1, op2, NI_AVX512BW_Shuffle, simdBaseJitType, simdSize);
+        }
+        else
+        {
+            assert(compIsaSupportedDebugOnly(InstructionSet_AVX512F));
+            retNode = gtNewSimdHWIntrinsicNode(type, op1, op2, NI_AVX512F_Shuffle, simdBaseJitType, simdSize);
+        }
+    }
     else
     {
         if (needsZero && compOpportunisticallyDependsOn(InstructionSet_SSSE3))
