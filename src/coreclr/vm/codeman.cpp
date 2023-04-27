@@ -1333,6 +1333,7 @@ void EEJitManager::SetCpuInfo()
     //
     // NOTE: This function needs to be kept in sync with compSetProcessor() in jit\compiler.cpp
     //
+    AffinitizeToAtomCore();
 
     CORJIT_FLAGS CPUCompileFlags;
 
@@ -1584,6 +1585,60 @@ void EEJitManager::SetCpuInfo()
             if ((cpuidInfo[CPUID_EBX] & (1 << 3)) != 0)                                                           // BMI1
             {
                 CPUCompileFlags.Set(InstructionSet_BMI1);
+            }
+
+            if ((cpuidInfo[CPUID_EBX] & (1 << 8)) != 0)                                                           // BMI2
+            {
+                CPUCompileFlags.Set(InstructionSet_BMI2);
+            }
+
+            if ((cpuidInfo[CPUID_EDX] & (1 << 14)) != 0)
+            {
+                CPUCompileFlags.Set(InstructionSet_X86Serialize);                                            // SERIALIZE
+            }
+        }
+
+        if (maxCpuId >= 0x07)
+        {
+            __cpuidex(cpuidInfo, 0x00000007, 0x00000000);
+            printf("\n Deepak ATOM Check \n");
+
+            // Atom in Hybrid:
+            // if (CPUID.7.0.EDX[15]) == 1 {
+            //    if (CPUID.1A.EAX[ 31:24]== 0x20) {
+            //       core is atom in a hybrid SoC
+            //    } else {
+            //       core is not Atom in a non-hybrid SoC
+            //    }
+            // }
+            if ((cpuidInfo[CPUID_EDX] & (1 << 15)) != 1)
+            {
+                __cpuid(cpuidInfo, 0x0000001A);
+                printf("\n Deepak ATOM  NON HYBRID CHECK : cpuidInfo[CPUID_EAX] = %d \n", (int)cpuidInfo[CPUID_EAX]);
+                if (((cpuidInfo[CPUID_EAX] & (1 << 29)) != 0) && ((cpuidInfo[CPUID_EAX] & (1 << 30)) != 1) && ((cpuidInfo[CPUID_EAX] & (1 << 31)) != 1))
+                {
+                    printf("\n Deepak ATOM NON HYBRID YES - ON ATOM \n");
+                    CPUCompileFlags.Set(CORJIT_FLAGS::CORJIT_FLAG_TARGET_ATOM);
+                }                
+            }
+
+            // Atom in non-Hybrid:
+            // if (CPUID.7.0.EDX[15]) != 1 {
+            //    if (CPUID.1A.EAX[ 31:24]== 0x20) {
+            //       core is Atom in a non-hybrid SoC
+            //    } else {
+            //       core is NOT Atom (bigcore for now) in a non-hybrid SoC
+            //    }
+            // }
+            if ((cpuidInfo[CPUID_EDX] & (1 << 15)) != 0)
+            {
+                __cpuid(cpuidInfo, 0x0000001A);
+                printf("\n Deepak ATOM  HYBRID CHECK : cpuidInfo[CPUID_EAX] = %d \n", (int)cpuidInfo[CPUID_EAX]);
+                if (((cpuidInfo[CPUID_EAX] & (1 << 29)) != 0) && ((cpuidInfo[CPUID_EAX] & (1 << 30)) != 1) && ((cpuidInfo[CPUID_EAX] & (1 << 31)) != 1))
+                {
+                    printf("\n Deepak ATOM  HYBRID YES - ON ATOM \n");
+                    CPUCompileFlags.Set(CORJIT_FLAGS::CORJIT_FLAG_TARGET_ATOM);
+                }                
             }
 
             if ((cpuidInfo[CPUID_EBX] & (1 << 8)) != 0)                                                           // BMI2

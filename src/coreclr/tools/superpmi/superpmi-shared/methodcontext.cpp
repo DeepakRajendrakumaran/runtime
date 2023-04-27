@@ -1243,6 +1243,8 @@ const char* CorJitFlagToString(CORJIT_FLAGS::CorJitFlag flag)
         return "CORJIT_FLAG_TIER0";
     case CORJIT_FLAGS::CorJitFlag::CORJIT_FLAG_TIER1:
         return "CORJIT_FLAG_TIER1";
+    case CORJIT_FLAGS::CorJitFlag::CORJIT_FLAG_TARGET_ATOM:
+        return "CORJIT_FLAGS::CORJIT_FLAG_TARGET_ATOM";
 
 #if defined(TARGET_ARM)
     case CORJIT_FLAGS::CorJitFlag::CORJIT_FLAG_RELATIVE_CODE_RELOCS:

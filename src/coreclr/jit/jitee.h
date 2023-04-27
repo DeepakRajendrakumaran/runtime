@@ -87,7 +87,7 @@ public:
         JIT_FLAG_UNUSED16                = 43,
 #endif // !defined(TARGET_ARM)
 
-        JIT_FLAG_UNUSED17                = 44,
+        JIT_FLAG_TARGET_ATOM             = 44,
         JIT_FLAG_UNUSED18                = 45,
         JIT_FLAG_UNUSED19                = 46,
         JIT_FLAG_UNUSED20                = 47,
@@ -207,6 +207,7 @@ public:
         FLAGS_EQUAL(CORJIT_FLAGS::CORJIT_FLAG_REVERSE_PINVOKE, JIT_FLAG_REVERSE_PINVOKE);
         FLAGS_EQUAL(CORJIT_FLAGS::CORJIT_FLAG_TIER0, JIT_FLAG_TIER0);
         FLAGS_EQUAL(CORJIT_FLAGS::CORJIT_FLAG_TIER1, JIT_FLAG_TIER1);
+        FLAGS_EQUAL(CORJIT_FLAGS::CORJIT_FLAG_TARGET_ATOM, JIT_FLAG_TARGET_ATOM);
 
 #if defined(TARGET_ARM)
 

@@ -97,6 +97,70 @@ extern "C" DWORD xmmYmmStateSupport();
 extern "C" DWORD avx512StateSupport();
 #endif
 
+// Some values differentiating E vs P cores. 
+/*void PrintCPUInfo() {
+    // Get total number (size) of elements in the data structure.
+    ULONG size;
+    GetSystemCpuSetInformation(nullptr, 0, &size, GetCurrentProcess(), 0);
+
+    // Allocate data structures based on size returned from first call.
+    std::unique_ptr<uint8_t[]> buffer(new uint8_t[size]);
+    PSYSTEM_CPU_SET_INFORMATION cpuSets = reinterpret_cast<PSYSTEM_CPU_SET_INFORMATION>(buffer.get());
+    PSYSTEM_CPU_SET_INFORMATION nextCPUSet;
+    GetSystemCpuSetInformation(cpuSets, size, &size, GetCurrentProcess(), 0);
+
+    nextCPUSet = cpuSets;
+
+    // Iterate through each logical processor.
+    for (DWORD offset = 0;
+        offset + sizeof(SYSTEM_CPU_SET_INFORMATION) <= size;
+        offset += sizeof(SYSTEM_CPU_SET_INFORMATION), nextCPUSet++)
+    {
+        // Make sure CPU Set Type is valid. (nextCPUSet->Type == CPU_SET_INFORMATION_TYPE::CpuSetInformation)
+        printf("Core ind = %d \n, Log Ind = %d,\n Efficiency Class = %d \n, Sched Class = %d \n, Group = %d\n ",
+            (int)nextCPUSet->CpuSet.CoreIndex ,
+            (int)nextCPUSet->CpuSet.LogicalProcessorIndex ,
+            (int)(nextCPUSet->CpuSet.EfficiencyClass) ,
+            (int)nextCPUSet->CpuSet.SchedulingClass,
+            (int)nextCPUSet->CpuSet.Group);
+    }
+    return;
+}*/
+
+
+inline void AffinitizeToAtomCore()
+{
+    /*HANDLE threadHandle = GetCurrentThread();
+    THREAD_POWER_THROTTLING_STATE throttlingState;
+    RtlZeroMemory(&throttlingState, sizeof(throttlingState));
+
+    throttlingState.Version = THREAD_POWER_THROTTLING_CURRENT_VERSION;
+    throttlingState.ControlMask = THREAD_POWER_THROTTLING_EXECUTION_SPEED;
+    throttlingState.StateMask = THREAD_POWER_THROTTLING_EXECUTION_SPEED;
+
+    return SetThreadInformation(threadHandle, ThreadPowerThrottling,
+        &throttlingState,
+        sizeof(throttlingState));*/
+    SetThreadAffinityMask(GetCurrentThread(), (1 << 22));
+    //SetThreadAffinityMask(GetCurrentThread(), (1 << 2));
+    //SetThreadIdealProcessor(GetCurrentThread(), 22);
+}
+
+inline bool DisablePowerThrottling()
+{
+    HANDLE threadHandle = GetCurrentThread();
+    THREAD_POWER_THROTTLING_STATE throttlingState;
+    RtlZeroMemory(&throttlingState, sizeof(throttlingState));
+
+    throttlingState.Version = THREAD_POWER_THROTTLING_CURRENT_VERSION;
+    throttlingState.ControlMask = THREAD_POWER_THROTTLING_EXECUTION_SPEED;
+    throttlingState.StateMask = 0;
+
+    return SetThreadInformation(threadHandle, ThreadPowerThrottling,
+        &throttlingState,
+        sizeof(throttlingState));
+}
+
 inline bool TargetHasAVXSupport()
 {
 #if (defined(TARGET_X86) || defined(TARGET_AMD64))
