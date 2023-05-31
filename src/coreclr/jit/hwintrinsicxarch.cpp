@@ -2324,7 +2324,8 @@ GenTree* Compiler::impSpecialIntrinsic(NamedIntrinsic        intrinsic,
                     // it's likely not worth it overall given that IsHardwareAccelerated reports false
                     break;
                 }
-                else if (varTypeIsSmallInt(simdBaseType))
+                else if ((varTypeIsByte(simdBaseType) && !compExactlyDependsOn(InstructionSet_AVX512VBMI_VL)) ||
+                         (varTypeIsShort(simdBaseType) && !compExactlyDependsOn(InstructionSet_AVX512BW_VL)))
                 {
                     bool crossLane = false;
 
@@ -2361,7 +2362,7 @@ GenTree* Compiler::impSpecialIntrinsic(NamedIntrinsic        intrinsic,
             }
             else if (simdSize == 64)
             {
-                if (varTypeIsByte(simdBaseType))
+                if (varTypeIsByte(simdBaseType) && !compExactlyDependsOn(InstructionSet_AVX512VBMI))
                 {
                     // TYP_BYTE, TYP_UBYTE need AVX512VBMI.
                     break;
