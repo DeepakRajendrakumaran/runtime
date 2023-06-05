@@ -23320,9 +23320,7 @@ GenTree* Compiler::gtNewSimdShuffleNode(
 #if defined(TARGET_XARCH)
     uint8_t control   = 0;
     bool    crossLane = false;
-    bool    needsZero = ((varTypeIsByte(simdBaseType) && !compExactlyDependsOn(InstructionSet_AVX512VBMI_VL)) ||
-                      (varTypeIsShort(simdBaseType) && !compExactlyDependsOn(InstructionSet_AVX512BW_VL))) &&
-                     (simdSize != 64);
+    bool     needsZero = (simdSize != 32) && (simdSize != 64);
     uint64_t value  = 0;
     simd_t   vecCns = {};
     simd_t   mskCns = {};
