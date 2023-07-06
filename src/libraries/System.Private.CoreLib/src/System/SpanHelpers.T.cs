@@ -1557,7 +1557,7 @@ namespace System
             Found:
                 return (int)(offset);
             }
-            else if (Vector512.IsHardwareAccelerated && length >= Vector512<TValue>.Count)
+            /*else if (Vector512.IsHardwareAccelerated && length >= Vector512<TValue>.Count)
             {
                 Vector512<TValue> equals, values = Vector512.Create(value);
                 ref TValue currentSearchSpace = ref searchSpace;
@@ -1586,7 +1586,7 @@ namespace System
                         return ComputeFirstIndex(ref searchSpace, ref oneVectorAwayFromEnd, equals);
                     }
                 }
-            }
+            }*/
             else if (Vector256.IsHardwareAccelerated && length >= Vector256<TValue>.Count)
             {
                 Vector256<TValue> equals, values = Vector256.Create(value);
@@ -1763,7 +1763,7 @@ namespace System
             Found:
                 return (int)(offset);
             }
-            else if (Vector512.IsHardwareAccelerated && length >= Vector512<TValue>.Count)
+            /*else if (Vector512.IsHardwareAccelerated && length >= Vector512<TValue>.Count)
             {
                 Vector512<TValue> equals, current, values0 = Vector512.Create(value0), values1 = Vector512.Create(value1);
                 ref TValue currentSearchSpace = ref searchSpace;
@@ -1794,7 +1794,7 @@ namespace System
                         return ComputeFirstIndex(ref searchSpace, ref oneVectorAwayFromEnd, equals);
                     }
                 }
-            }
+            }*/
             else if (Vector256.IsHardwareAccelerated && length >= Vector256<TValue>.Count)
             {
                 Vector256<TValue> equals, current, values0 = Vector256.Create(value0), values1 = Vector256.Create(value1);
@@ -1970,7 +1970,7 @@ namespace System
             Found:
                 return (int)(offset);
             }
-            else if (Vector512.IsHardwareAccelerated && length >= Vector512<TValue>.Count)
+            /*else if (Vector512.IsHardwareAccelerated && length >= Vector512<TValue>.Count)
             {
                 Vector512<TValue> equals, current, values0 = Vector512.Create(value0), values1 = Vector512.Create(value1), values2 = Vector512.Create(value2);
                 ref TValue currentSearchSpace = ref searchSpace;
@@ -2001,7 +2001,7 @@ namespace System
                         return ComputeFirstIndex(ref searchSpace, ref oneVectorAwayFromEnd, equals);
                     }
                 }
-            }
+            }*/
             else if (Vector256.IsHardwareAccelerated && length >= Vector256<TValue>.Count)
             {
                 Vector256<TValue> equals, current, values0 = Vector256.Create(value0), values1 = Vector256.Create(value1), values2 = Vector256.Create(value2);
@@ -2126,7 +2126,7 @@ namespace System
             Found:
                 return (int)(offset);
             }
-            else if (Vector512.IsHardwareAccelerated && length >= Vector512<TValue>.Count)
+            /*else if (Vector512.IsHardwareAccelerated && length >= Vector512<TValue>.Count)
             {
                 Vector512<TValue> equals, current, values0 = Vector512.Create(value0), values1 = Vector512.Create(value1), values2 = Vector512.Create(value2), values3 = Vector512.Create(value3);
                 ref TValue currentSearchSpace = ref searchSpace;
@@ -2159,7 +2159,7 @@ namespace System
                         return ComputeFirstIndex(ref searchSpace, ref oneVectorAwayFromEnd, equals);
                     }
                 }
-            }
+            }*/
             else if (Vector256.IsHardwareAccelerated && length >= Vector256<TValue>.Count)
             {
                 Vector256<TValue> equals, current, values0 = Vector256.Create(value0), values1 = Vector256.Create(value1), values2 = Vector256.Create(value2), values3 = Vector256.Create(value3);
@@ -2289,7 +2289,7 @@ namespace System
             Found:
                 return (int)(offset);
             }
-            else if (Vector512.IsHardwareAccelerated && length >= Vector512<TValue>.Count)
+            /*else if (Vector512.IsHardwareAccelerated && length >= Vector512<TValue>.Count)
             {
                 Vector512<TValue> equals, current, values0 = Vector512.Create(value0), values1 = Vector512.Create(value1),
                     values2 = Vector512.Create(value2), values3 = Vector512.Create(value3), values4 = Vector512.Create(value4);
@@ -2323,7 +2323,7 @@ namespace System
                         return ComputeFirstIndex(ref searchSpace, ref oneVectorAwayFromEnd, equals);
                     }
                 }
-            }
+            }*/
             else if (Vector256.IsHardwareAccelerated && length >= Vector256<TValue>.Count)
             {
                 Vector256<TValue> equals, current, values0 = Vector256.Create(value0), values1 = Vector256.Create(value1),
