@@ -909,6 +909,12 @@ void Lowering::LowerHWIntrinsicCC(GenTreeHWIntrinsic* node, NamedIntrinsic newIn
             break;
         }
 
+        case NI_AVX512F_KOR:
+        {
+            assert(HWIntrinsicInfo::lookupNumArgs(newIntrinsicId) == 2);
+            break;
+        }
+
         default:
             unreached();
     }
@@ -8617,25 +8623,108 @@ void Lowering::ContainCheckHWIntrinsic(GenTreeHWIntrinsic* node)
 
             switch (category)
             {
-                case HW_Category_MemoryLoad:
-                    if ((intrinsicId == NI_AVX_MaskLoad) || (intrinsicId == NI_AVX2_MaskLoad))
-                    {
-                        ContainCheckHWIntrinsicAddr(node, op1);
-                    }
-                    else
-                    {
-                        ContainCheckHWIntrinsicAddr(node, op2);
-                    }
-                    break;
-
-                case HW_Category_MemoryStore:
-                    ContainCheckHWIntrinsicAddr(node, op1);
-                    break;
-
-                case HW_Category_SimpleSIMD:
-                case HW_Category_SIMDScalar:
-                case HW_Category_Scalar:
+            case HW_Category_MemoryLoad:
+                if ((intrinsicId == NI_AVX_MaskLoad) || (intrinsicId == NI_AVX2_MaskLoad))
                 {
+                    ContainCheckHWIntrinsicAddr(node, op1);
+                }
+                else
+                {
+                    ContainCheckHWIntrinsicAddr(node, op2);
+                }
+                break;
+
+            case HW_Category_MemoryStore:
+                ContainCheckHWIntrinsicAddr(node, op1);
+                break;
+
+            case HW_Category_SimpleSIMD:
+            case HW_Category_SIMDScalar:
+            case HW_Category_Scalar:
+            {
+                /************************
+                    node->gtType = TYP_MASK;
+                node->ChangeHWIntrinsicId(maskIntrinsicId);
+
+                LowerNode(node);
+            }
+
+                LIR::Use use;
+                if (BlockRange().TryGetUse(node, &use))
+                {
+                    GenTreeHWIntrinsic* cc;
+
+                    cc = comp->gtNewSimdHWIntrinsicNode(simdType, node, NI_AVX512F_KORTEST, simdBaseJitType, simdSize);
+                    BlockRange().InsertBefore(nextNode, cc);
+
+                    use.ReplaceWith(cc);
+                    LowerHWIntrinsicCC(cc, NI_AVX512F_KORTEST, cmpCnd);
+
+                    nextNode = cc->gtNext;
+                    **************************************************/
+
+
+
+
+
+
+
+
+                if (intrinsicId == NI_AVX512F_Or && op1->gtOper == GT_HWINTRINSIC && op2->gtOper == GT_HWINTRINSIC)
+                {
+                    if (op1->AsHWIntrinsic()->GetHWIntrinsicId() == NI_AVX512F_ConvertMaskToVector &&
+                        op2->AsHWIntrinsic()->GetHWIntrinsicId() == NI_AVX512F_ConvertMaskToVector)
+                    {
+                            node->Op(1) = op1->AsHWIntrinsic()->Op(1);
+                            node->Op(2) = op2->AsHWIntrinsic()->Op(1);
+                            node->gtType = TYP_MASK;
+                            node->ChangeHWIntrinsicId(NI_AVX512F_KOR);
+                            BlockRange().Remove(op1);
+                            BlockRange().Remove(op2);
+                            LowerNode(node);
+
+                            GenTree* maskToVector =
+                                comp->gtNewSimdHWIntrinsicNode(Compiler::getSIMDTypeForSize(simdSize), node,
+                                                               NI_AVX512F_ConvertMaskToVector,
+                                                               simdBaseJitType, simdSize);
+                            LIR::Use use;
+
+                            if (BlockRange().TryGetUse(node, &use))
+                            {
+                                use.ReplaceWith(maskToVector);
+                            }
+                            BlockRange().InsertAfter(node, maskToVector);
+                            /*LIR::Use use;
+
+                            if (BlockRange().TryGetUse(node, &use))
+                            {
+                                use.ReplaceWith(maskToVector);
+                            }
+*/
+///////////////////////////////////////
+
+                            /* GenTree* korNode =
+                                comp->gtNewSimdHWIntrinsicNode(TYP_MASK, op1->AsHWIntrinsic()->Op(1),
+                                                               op2->AsHWIntrinsic()->Op(1), NI_AVX512F_KOR,
+                                                               simdBaseJitType,
+                                                               simdSize);
+                            BlockRange().InsertBefore(node, korNode);
+                            node->Op(1)  = korNode;
+                            //node->Op(2)  = nullptr;
+                            node->gtType = Compiler::getSIMDTypeForSize(simdSize);
+                            node->ChangeHWIntrinsicId(NI_AVX512F_ConvertMaskToVector);
+                            node->ClearUnusedValue();
+                            LowerNode(node);*/
+
+
+                             
+
+  
+                            printf("\n\nDeepak\n\n");
+                            break;
+                    }
+                }
+                     
                     bool supportsOp1RegOptional = false;
                     bool supportsOp2RegOptional = false;
 
