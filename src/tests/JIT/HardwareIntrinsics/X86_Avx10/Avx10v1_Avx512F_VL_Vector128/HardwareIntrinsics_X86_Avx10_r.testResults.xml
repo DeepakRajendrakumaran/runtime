@@ -1,0 +1,38 @@
+<assemblies>
+
+<assembly
+    name="HardwareIntrinsics_X86_Avx10_r"
+    test-framework="XUnitWrapperGenerator-generated-runner"
+    run-date="2024-04-16"
+    run-time="14:24:36"
+    time="6.754273"
+    total="2"
+    passed="2"
+    failed="0"
+    skipped="0"
+    errors="0">
+
+<collection
+    name="Collection"
+    time="6.754273"
+    total="2"
+    passed="2"
+    failed="0"
+    skipped="0"
+    errors="0"
+>
+<test name="JIT\HardwareIntrinsics\X86_Avx10\Avx10v1\Avx10v1_handwritten_r\X86_Avx10v1_handwritten_r.dll" type="IntelHardwareIntrinsicTest._Avx10v1.Program" method="ConversionKhushal" time="1.001226" result="Pass"></test>
+
+<test name="JIT\HardwareIntrinsics\X86_Avx10\Avx10v1\Avx10v1_r\X86_Avx10v1_r.dll" type="JIT.HardwareIntrinsics.X86._Avx10v1.Program" method="AbsUInt64" time="0.623063" result="Pass"><output><![CDATA[Beginning scenario: RunBasicScenario_UnsafeRead
+Beginning scenario: RunBasicScenario_Load
+Beginning scenario: RunBasicScenario_LoadAligned
+Beginning scenario: RunReflectionScenario_UnsafeRead
+Beginning scenario: RunLclVarScenario_UnsafeRead
+Beginning scenario: RunClassFldScenario
+Beginning scenario: RunStructLclFldScenario
+Beginning scenario: RunStructFldScenario
+]]></output></test>
+
+</collection>
+</assembly>
+</assemblies>
