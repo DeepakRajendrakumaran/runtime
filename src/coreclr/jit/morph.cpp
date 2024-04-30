@@ -10687,6 +10687,10 @@ GenTree* Compiler::fgOptimizeHWIntrinsic(GenTreeHWIntrinsic* node)
         case NI_AVX512DQ_Or:
         case NI_AVX512F_Xor:
         case NI_AVX512DQ_Xor:
+        case NI_AVX10v1_V512_And:
+        case NI_AVX10v1_V512_AndNot:
+        case NI_AVX10v1_V512_Or:
+        case NI_AVX10v1_V512_Xor:
         {
             GenTree* op1 = node->Op(1);
             GenTree* op2 = node->Op(2);
@@ -10722,6 +10726,7 @@ GenTree* Compiler::fgOptimizeHWIntrinsic(GenTreeHWIntrinsic* node)
             {
                 case NI_AVX512F_And:
                 case NI_AVX512DQ_And:
+                case NI_AVX10v1_V512_And:
                 {
                     maskIntrinsicId = NI_AVX512F_AndMask;
                     break;
@@ -10729,6 +10734,7 @@ GenTree* Compiler::fgOptimizeHWIntrinsic(GenTreeHWIntrinsic* node)
 
                 case NI_AVX512F_AndNot:
                 case NI_AVX512DQ_AndNot:
+                case NI_AVX10v1_V512_AndNot:
                 {
                     maskIntrinsicId = NI_AVX512F_AndNotMask;
                     break;
@@ -10736,6 +10742,7 @@ GenTree* Compiler::fgOptimizeHWIntrinsic(GenTreeHWIntrinsic* node)
 
                 case NI_AVX512F_Or:
                 case NI_AVX512DQ_Or:
+                case NI_AVX10v1_V512_Or:
                 {
                     maskIntrinsicId = NI_AVX512F_OrMask;
                     break;
@@ -10743,6 +10750,7 @@ GenTree* Compiler::fgOptimizeHWIntrinsic(GenTreeHWIntrinsic* node)
 
                 case NI_AVX512F_Xor:
                 case NI_AVX512DQ_Xor:
+                case NI_AVX10v1_V512_Xor:
                 {
                     maskIntrinsicId = NI_AVX512F_XorMask;
                     break;
