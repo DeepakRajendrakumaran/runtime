@@ -9,6 +9,5 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\X86\Shared\SimpleUnOpTest_DataTable.cs" />
-    <Compile Include="Avx10v1AbsTest.cs" />
   </ItemGroup>
 </Project>
