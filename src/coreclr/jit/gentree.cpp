@@ -20099,9 +20099,9 @@ GenTree* Compiler::gtNewSimdAbsNode(var_types type, GenTree* op1, CorInfoType si
             assert(compIsaSupportedDebugOnly(InstructionSet_AVX512F));
             intrinsic = NI_AVX512F_Abs;
         }
-        else if (compOpportunisticallyDependsOn(InstructionSet_AVX512F_VL))
+        else if (IsEitherIsaSupportedOpportunistically(InstructionSet_AVX512F_VL, InstructionSet_AVX10v1_V256))
         {
-            intrinsic = NI_AVX512F_VL_Abs;
+            intrinsic = (simdSize == 32) ? NI_AVX10v1_Abs : NI_AVX10v1_V256_Abs ;
         }
     }
     else if (simdSize == 32)

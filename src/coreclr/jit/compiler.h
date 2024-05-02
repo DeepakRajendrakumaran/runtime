@@ -9453,6 +9453,40 @@ private:
     }
 #endif // DEBUG
 
+#ifdef DEBUG
+    //------------------------------------------------------------------------
+    // IsEitherIsaSupportedDebugOnly - Does isa support exist for isa1 or isa2.
+    //
+    // Returns:
+    //    `true` if either isa1 or isa2 is supported.
+    //
+    bool IsEitherIsaSupportedDebugOnly(CORINFO_InstructionSet isa1, CORINFO_InstructionSet isa2) const
+    {
+#ifdef TARGET_XARCH
+        return compIsaSupportedDebugOnly(isa1) ||
+               compIsaSupportedDebugOnly(isa2);
+#else
+        return false;
+#endif
+    }
+#endif // DEBUG
+
+    //------------------------------------------------------------------------
+    // IsEitherIsaSupportedOpportunistically - Does opportunistic isa support exist for isa1 or isa2.
+    //
+    // Returns:
+    //    `true` if either isa1 or isa2 is supported.
+    //
+    bool IsEitherIsaSupportedOpportunistically(CORINFO_InstructionSet isa1, CORINFO_InstructionSet isa2) const
+    {
+#ifdef TARGET_XARCH
+        return compOpportunisticallyDependsOn(isa1) ||
+               compOpportunisticallyDependsOn(isa2);
+#else
+        return false;
+#endif
+    }
+
     //------------------------------------------------------------------------
     // IsBaselineVector512IsaSupportedOpportunistically - Does opportunistic isa support exist for Vector512.
     //

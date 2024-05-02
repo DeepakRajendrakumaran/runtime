@@ -53,9 +53,9 @@ namespace IntelHardwareIntrinsicTest._Avx10v1_Avx512BW_VL_Vector128
         }
 
         [MethodImplAttribute(MethodImplOptions.NoInlining)]
-        public static Vector256<ulong> getAbs256(Vector256<long> val)
+        public static Vector256<long> getAbs256(Vector256<long> val)
         {
-            return Avx10v1.V256.Abs(val);
+            return Vector256.Abs<long>(val);
         }
 
         [Fact]
@@ -72,7 +72,7 @@ namespace IntelHardwareIntrinsicTest._Avx10v1_Avx512BW_VL_Vector128
             {
                 Console.WriteLine("Avx10v1_V256 supported");
                 Vector256<long> val = Vector256.Create<long>(-5);
-                Vector256<ulong> absVal = getAbs256(val);
+                Vector256<long> absVal = getAbs256(val);
             }
         }
     }
