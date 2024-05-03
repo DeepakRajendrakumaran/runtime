@@ -165,6 +165,10 @@ implication        ,X86   ,AVX512F              ,AVX512BW_VL
 implication        ,X86   ,AVX512F              ,AVX512CD_VL
 implication        ,X86   ,AVX512F              ,AVX512DQ_VL
 
+implication        ,X86   ,AVX512F              ,AVX10v1
+implication        ,X86   ,AVX512F              ,AVX10v1_V256
+implication        ,X86   ,AVX512F              ,AVX10v1_V512
+
 ; Definition of X64 instruction sets
 definearch         ,X64   ,64Bit     ,X64, X64
 
