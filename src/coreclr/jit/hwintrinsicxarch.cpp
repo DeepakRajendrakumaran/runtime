@@ -1504,7 +1504,7 @@ GenTree* Compiler::impSpecialIntrinsic(NamedIntrinsic        intrinsic,
                 else
                 {
                     assert(simdSize == 16);
-                    intrinsic = NI_AVX512DQ_VL_ConvertToVector128Double;
+                    intrinsic = NI_AVX10v1_ConvertToVector128Double;
                 }
                 op1     = impSIMDPopStack();
                 retNode = gtNewSimdHWIntrinsicNode(retType, op1, intrinsic, simdBaseJitType, simdSize);
@@ -1598,7 +1598,7 @@ GenTree* Compiler::impSpecialIntrinsic(NamedIntrinsic        intrinsic,
                 switch (simdSize)
                 {
                     case 16:
-                        intrinsic = NI_AVX512F_VL_ConvertToVector128Single;
+                        intrinsic = NI_AVX10v1_ConvertToVector128Single;
                         break;
                     case 32:
                         intrinsic = NI_AVX512F_VL_ConvertToVector256Single;
@@ -3597,6 +3597,7 @@ GenTree* Compiler::impSpecialIntrinsic(NamedIntrinsic        intrinsic,
         case NI_AVX512F_VL_Fixup:
         case NI_AVX10v1_Fixup:
         case NI_AVX10v1_V256_Fixup:
+        case NI_AVX10v1_FixupScalar:
         {
             assert(sig->numArgs == 4);
 

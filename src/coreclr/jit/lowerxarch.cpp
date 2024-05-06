@@ -906,7 +906,7 @@ GenTree* Lowering::LowerCast(GenTree* tree)
             {
                 // run vfixupimmsd base on table and no flags reporting
                 GenTree* oper1 = comp->gtNewSimdHWIntrinsicNode(TYP_SIMD16, castOp, op1Clone1, tbl, ctrlByte,
-                                                                NI_AVX512F_FixupScalar, fieldType, 16);
+                                                                NI_AVX10v1_FixupScalar, fieldType, 16);
                 BlockRange().InsertAfter(ctrlByte, oper1);
                 LowerNode(oper1);
 
@@ -928,7 +928,7 @@ GenTree* Lowering::LowerCast(GenTree* tree)
 
                 // run vfixupimmsd base on table and no flags reporting
                 GenTree* fixupVal = comp->gtNewSimdHWIntrinsicNode(TYP_SIMD16, castOp, op1Clone1, tbl, ctrlByte,
-                                                                   NI_AVX512F_FixupScalar, fieldType, 16);
+                                                                   NI_AVX10v1_FixupScalar, fieldType, 16);
                 BlockRange().InsertAfter(ctrlByte, fixupVal);
                 LowerNode(fixupVal);
 
@@ -1475,7 +1475,7 @@ GenTree* Lowering::LowerHWIntrinsic(GenTreeHWIntrinsic* node)
 
             if ((genTypeSize(simdBaseType) == 4) && !comp->compOpportunisticallyDependsOn(InstructionSet_AVX512DQ))
             {
-                intrinsicId = NI_AVX512DQ_ExtractVector256;
+                intrinsicId = NI_AVX10v1_V512_ExtractVector256;
             }
 
             GenTree* op1 = node->Op(1);
@@ -1533,7 +1533,7 @@ GenTree* Lowering::LowerHWIntrinsic(GenTreeHWIntrinsic* node)
 
             if ((genTypeSize(simdBaseType) == 4) && !comp->compOpportunisticallyDependsOn(InstructionSet_AVX512DQ))
             {
-                intrinsicId = NI_AVX512DQ_InsertVector256;
+                intrinsicId = NI_AVX10v1_V512_InsertVector256;
             }
 
             GenTree* op1 = node->Op(1);
@@ -4632,7 +4632,7 @@ GenTree* Lowering::LowerHWIntrinsicGetElement(GenTreeHWIntrinsic* node)
 
             if ((genTypeSize(simdBaseType) == 8) && !comp->compOpportunisticallyDependsOn(InstructionSet_AVX512DQ))
             {
-                extractIntrinsicId = NI_AVX512DQ_ExtractVector128;
+                extractIntrinsicId = NI_AVX10v1_V512_ExtractVector128;
             }
 
             tmp1 = comp->gtNewSimdHWIntrinsicNode(TYP_SIMD16, op1, idx, extractIntrinsicId, simdBaseJitType, simdSize);
@@ -4916,7 +4916,7 @@ GenTree* Lowering::LowerHWIntrinsicWithElement(GenTreeHWIntrinsic* node)
 
             if ((genTypeSize(simdBaseType) == 8) && !comp->compOpportunisticallyDependsOn(InstructionSet_AVX512DQ))
             {
-                extractIntrinsicId = NI_AVX512DQ_ExtractVector128;
+                extractIntrinsicId = NI_AVX10v1_V512_ExtractVector128;
             }
 
             tmp1 = comp->gtNewSimdHWIntrinsicNode(TYP_SIMD16, op1, idx, extractIntrinsicId, simdBaseJitType, simdSize);
@@ -4936,7 +4936,7 @@ GenTree* Lowering::LowerHWIntrinsicWithElement(GenTreeHWIntrinsic* node)
 
         if ((genTypeSize(simdBaseType) == 8) && !comp->compOpportunisticallyDependsOn(InstructionSet_AVX512DQ))
         {
-            insertIntrinsicId = NI_AVX512DQ_InsertVector128;
+            insertIntrinsicId = NI_AVX10v1_V512_InsertVector128;
         }
 
         node->ResetHWIntrinsicId(insertIntrinsicId, comp, tmp64, result, idx);
@@ -5218,7 +5218,8 @@ GenTree* Lowering::LowerHWIntrinsicWithElement(GenTreeHWIntrinsic* node)
         // Now that we have finalized the shape of the tree, lower the insertion node as well.
 
         assert((node->GetHWIntrinsicId() == NI_AVX512F_InsertVector128) ||
-               (node->GetHWIntrinsicId() == NI_AVX512DQ_InsertVector128));
+               (node->GetHWIntrinsicId() == NI_AVX512DQ_InsertVector128) ||
+               (node->GetHWIntrinsicId() == NI_AVX10v1_V512_InsertVector128));
         assert(node != result);
 
         nextNode = LowerNode(node);
@@ -8593,6 +8594,7 @@ bool Lowering::IsContainableHWIntrinsicOp(GenTreeHWIntrinsic* parentNode, GenTre
                 case NI_AVX512F_RoundScaleScalar:
                 case NI_AVX512DQ_RangeScalar:
                 case NI_AVX512DQ_ReduceScalar:
+                case NI_AVX10v1_FixupScalar:
                 case NI_AVX10v1_GetMantissaScalar:
                 case NI_AVX10v1_RangeScalar:
                 case NI_AVX10v1_ReduceScalar:
@@ -10589,6 +10591,7 @@ void Lowering::ContainCheckHWIntrinsic(GenTreeHWIntrinsic* node)
                         case NI_AVX512F_FixupScalar:
                         case NI_AVX512F_VL_Fixup:
                         case NI_AVX10v1_Fixup:
+                        case NI_AVX10v1_FixupScalar:
                         case NI_AVX10v1_V256_Fixup:
                         {
                             if (!isContainedImm)

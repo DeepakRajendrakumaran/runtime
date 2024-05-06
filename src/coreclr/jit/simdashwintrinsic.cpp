@@ -1185,16 +1185,16 @@ GenTree* Compiler::impSimdAsHWIntrinsicSpecial(NamedIntrinsic       intrinsic,
                     NamedIntrinsic intrinsic = NI_Illegal;
                     if (simdSize == 64)
                     {
-                        intrinsic = NI_AVX512DQ_ConvertToVector512Double;
+                        intrinsic = NI_AVX10v1_V512_ConvertToVector512Double;
                     }
                     else if (simdSize == 32)
                     {
-                        intrinsic = NI_AVX512DQ_VL_ConvertToVector256Double;
+                        intrinsic = NI_AVX10v1_V256_ConvertToVector256Double;
                     }
                     else
                     {
                         assert(simdSize == 16);
-                        intrinsic = NI_AVX512DQ_VL_ConvertToVector128Double;
+                        intrinsic = NI_AVX10v1_ConvertToVector128Double;
                     }
                     return gtNewSimdHWIntrinsicNode(retType, op1, intrinsic, simdBaseJitType, simdSize);
                 }
@@ -1225,10 +1225,10 @@ GenTree* Compiler::impSimdAsHWIntrinsicSpecial(NamedIntrinsic       intrinsic,
                         switch (simdSize)
                         {
                             case 16:
-                                intrinsic = NI_AVX512F_VL_ConvertToVector128Single;
+                                intrinsic = NI_AVX10v1_ConvertToVector128Single;
                                 break;
                             case 32:
-                                intrinsic = NI_AVX512F_VL_ConvertToVector256Single;
+                                intrinsic = NI_AVX10v1_V256_ConvertToVector256Single;
                                 break;
                             case 64:
                                 intrinsic = NI_AVX512F_ConvertToVector512Single;
