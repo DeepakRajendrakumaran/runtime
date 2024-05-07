@@ -620,6 +620,14 @@ NamedIntrinsic HWIntrinsicInfo::lookupId(Compiler*         comp,
         }
     }
 #endif
+#if defined(TARGET_XARCH)
+    if ((isa == InstructionSet_AVX10v1) || (isa == InstructionSet_AVX10v1_V256) || (isa == InstructionSet_AVX10v1_V512))
+    {
+        return lookupIdEquivalendAvx512(comp, sig, className, methodName, enclosingClassName,
+                                       isa); // If this returns the equivalent AVx512 ISA for AVX10, then things should
+                                             // work
+    }
+#endif
 
     for (int i = 0; i < (NI_HW_INTRINSIC_END - NI_HW_INTRINSIC_START - 1); i++)
     {
@@ -656,6 +664,56 @@ NamedIntrinsic HWIntrinsicInfo::lookupId(Compiler*         comp,
     // Those intrinsics will hit this code path and need to return NI_Illegal
     return NI_Illegal;
 }
+
+#if defined(TARGET_XARCH)
+NamedIntrinsic HWIntrinsicInfo::lookupIdEquivalendAvx512(Compiler*         comp,
+                                                         CORINFO_SIG_INFO* sig,
+                                                         const char*       className,
+                                                         const char*       methodName,
+                                                         const char*       enclosingClassName,
+                                                         CORINFO_InstructionSet isa)
+{
+    assert((isa == InstructionSet_AVX10v1) || (isa == InstructionSet_AVX10v1_V256) ||
+           (isa == InstructionSet_AVX10v1_V512));
+
+    if (isa == InstructionSet_AVX10v1)
+    {
+        for (int i = 0; i < (NI_HW_INTRINSIC_END - NI_HW_INTRINSIC_START - 1); i++)
+        {
+            const HWIntrinsicInfo& intrinsicInfo = hwIntrinsicInfoArray[i];
+            const CORINFO_InstructionSet ins_isa =
+                static_cast<CORINFO_InstructionSet>(hwIntrinsicInfoArray[i].isa);
+
+            if ((ins_isa != InstructionSet_AVX512F_VL) || (ins_isa != InstructionSet_AVX512BW_VL) ||
+                (ins_isa != InstructionSet_AVX512CD_VL) || (ins_isa != InstructionSet_AVX512DQ_VL) ||
+                (ins_isa != InstructionSet_AVX512VBMI_VL) || (ins_isa != InstructionSet_AVX512F_VL_X64) ||
+                (ins_isa != InstructionSet_AVX512BW_VL_X64) || (ins_isa != InstructionSet_AVX512CD_VL_X64) ||
+                (ins_isa != InstructionSet_AVX512DQ_VL_X64) || (ins_isa != InstructionSet_AVX512VBMI_VL_X64))
+            {
+                continue;
+            }
+
+            int numArgs = static_cast<unsigned>(intrinsicInfo.numArgs);
+
+            if ((numArgs != -1) && (sig->numArgs != static_cast<unsigned>(intrinsicInfo.numArgs)))
+            {
+                continue;
+            }
+
+            if (strcmp(methodName, intrinsicInfo.name) == 0)// Add logic to verify required signature is supported here
+            {
+                unsigned       simdSize = intrinsicInfo.lookupSimdSize(comp, intrinsicInfo.id, sig);
+                printf("\n simdSize = %d \n", simdSize);
+                NamedIntrinsic ni = intrinsicInfo.id;
+                return ni;
+            }
+        }
+    }
+    return NI_Illegal;
+
+
+}
+#endif
 
 //------------------------------------------------------------------------
 // lookupSimdSize: Gets the SimdSize for a given HWIntrinsic and signature

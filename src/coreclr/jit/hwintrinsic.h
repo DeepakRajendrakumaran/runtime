@@ -512,6 +512,12 @@ struct HWIntrinsicInfo
     static unsigned lookupSimdSize(Compiler* comp, NamedIntrinsic id, CORINFO_SIG_INFO* sig);
 
 #if defined(TARGET_XARCH)
+    static NamedIntrinsic lookupIdEquivalendAvx512(Compiler*         comp,
+                                   CORINFO_SIG_INFO* sig,
+                                   const char*       className,
+                                   const char*       methodName,
+                                   const char*       enclosingClassName,
+                                                   CORINFO_InstructionSet isa);
     static int lookupImmUpperBound(NamedIntrinsic intrinsic);
 #elif defined(TARGET_ARM64)
     static void lookupImmBounds(
