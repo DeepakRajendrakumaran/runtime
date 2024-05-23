@@ -55,6 +55,26 @@ REGDEF(R13,    13, 0x2000, "r13", 0)
 REGDEF(R14,    14, 0x4000, "r14", 0)
 REGDEF(R15,    15, 0x8000, "r15", 0)
 
+#ifdef TARGET_AMD64
+REGDEF(R16,    16, 0x10000, "r16" , 0)
+REGDEF(R17,    17, 0x20000, "r17" , 0)
+REGDEF(R18,    18, 0x40000, "r18", 0)
+REGDEF(R19,    19, 0x80000, "r19", 0)
+REGDEF(R20,    20, 0x100000, "r20", 0)
+REGDEF(R21,    21, 0x200000, "r21", 0)
+REGDEF(R22,    22, 0x400000, "r22", 0)
+REGDEF(R23,    23, 0x800000, "r23", 0)
+REGDEF(R24,    24, 0x1000000, "r24" , 0)
+REGDEF(R25,    25, 0x2000000, "r25" , 0)
+REGDEF(R26,    26, 0x4000000, "r26", 0)
+REGDEF(R27,    27, 0x8000000, "r27", 0)
+REGDEF(R28,    28, 0x10000000, "r28", 0)
+REGDEF(R29,    29, 0x20000000, "r29", 0)
+REGDEF(R30,    30, 0x40000000, "r30", 0)
+REGDEF(R31,    31, 0x80000000, "r31", 0)
+
+#endif // !TARGET_AMD64
+
 REGALIAS(EAX, RAX)
 REGALIAS(ECX, RCX)
 REGALIAS(EDX, RDX)
@@ -67,11 +87,11 @@ REGALIAS(EDI, RDI)
 #endif // !defined(TARGET_X86)
 
 #ifdef TARGET_AMD64
-#define XMMBASE 16
+#define XMMBASE 32
 #define XMMMASK(x) ((__int64)(1) << ((x)+XMMBASE))
 
-#define KBASE 48
-#define KMASK(x) ((__int64)(1) << ((x)+KBASE))
+#define KBASE 64 // should be using predicate
+#define KMASK(x) (1ULL << x)
 
 #else // !TARGET_AMD64
 #define XMMBASE 8

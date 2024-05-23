@@ -10912,10 +10912,10 @@ void CodeGen::genZeroInitFrameUsingBlockInit(int untrLclHi, int untrLclLo, regNu
         // Grab a non-argument, non-callee saved XMM reg
 #ifdef UNIX_AMD64_ABI
         // System V x64 first temp reg is xmm8
-        regNumber zeroSIMDReg = genRegNumFromMask(RBM_XMM8);
+        regNumber zeroSIMDReg = genRegNumFromMask(RBM_XMM8 MORE_THAN_64_REG_ARG(TYP_INT));
 #else
         // Windows first temp reg is xmm4
-        regNumber zeroSIMDReg = genRegNumFromMask(RBM_XMM4);
+        regNumber zeroSIMDReg = genRegNumFromMask(RBM_XMM4 MORE_THAN_64_REG_ARG(TYP_INT));
 #endif // UNIX_AMD64_ABI
 
 #if defined(TARGET_AMD64)

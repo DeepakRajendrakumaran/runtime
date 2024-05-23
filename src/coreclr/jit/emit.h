@@ -837,8 +837,10 @@ protected:
 #define ID_EXTRA_BITFIELD_BITS (23)
 #elif defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
 #define ID_EXTRA_BITFIELD_BITS (14)
-#elif defined(TARGET_XARCH)
+#elif defined(TARGET_X86)
 #define ID_EXTRA_BITFIELD_BITS (16)
+#elif defined(TARGET_AMD64)
+#define ID_EXTRA_BITFIELD_BITS (18)
 #else
 #error Unsupported or unset target architecture
 #endif
@@ -3519,6 +3521,7 @@ public:
 
 inline void emitter::instrDesc::checkSizes()
 {
+    printf("\n\n\n Deepak offsetof(instrDesc, _idAddrUnion) = %d \n\n\n", (int)offsetof(instrDesc, _idAddrUnion));
     C_ASSERT(SMALL_IDSC_SIZE == offsetof(instrDesc, _idAddrUnion));
 }
 
