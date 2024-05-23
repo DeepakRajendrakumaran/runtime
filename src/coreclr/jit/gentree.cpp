@@ -19797,7 +19797,7 @@ bool GenTree::isRMWHWIntrinsic(Compiler* comp)
 
     switch (intrinsicId)
     {
-        case NI_AVX512F_BlendVariableMask:
+        case NI_EVEX_BlendVariableMask:
         {
             GenTree* op2 = hwintrinsic->Op(2);
 
@@ -21792,8 +21792,8 @@ GenTree* Compiler::gtNewSimdCmpOpNode(
         {
             if (simdSize == 64)
             {
-                assert(IsBaselineVector512IsaSupportedDebugOnly());
-                intrinsic                = NI_AVX512F_CompareEqualMask;
+                assert(compIsaSupportedDebugOnly(InstructionSet_EVEX));
+                intrinsic                = NI_EVEX_CompareEqualMask;
                 needsConvertMaskToVector = true;
             }
             else if (simdSize == 32)
@@ -21855,11 +21855,11 @@ GenTree* Compiler::gtNewSimdCmpOpNode(
 
         case GT_GE:
         {
-            if (IsBaselineVector512IsaSupportedOpportunistically())
+            if (compOpportunisticallyDependsOn(InstructionSet_EVEX))
             {
                 if ((simdSize == 64) || !varTypeIsFloating(simdBaseType))
                 {
-                    intrinsic                = NI_AVX512F_CompareGreaterThanOrEqualMask;
+                    intrinsic                = NI_EVEX_CompareGreaterThanOrEqualMask;
                     needsConvertMaskToVector = true;
                     break;
                 }
@@ -21929,11 +21929,11 @@ GenTree* Compiler::gtNewSimdCmpOpNode(
 
         case GT_GT:
         {
-            if (IsBaselineVector512IsaSupportedOpportunistically())
+            if (compOpportunisticallyDependsOn(InstructionSet_EVEX))
             {
                 if ((simdSize == 64) || varTypeIsUnsigned(simdBaseType))
                 {
-                    intrinsic                = NI_AVX512F_CompareGreaterThanMask;
+                    intrinsic                = NI_EVEX_CompareGreaterThanMask;
                     needsConvertMaskToVector = true;
                     break;
                 }
@@ -22110,11 +22110,11 @@ GenTree* Compiler::gtNewSimdCmpOpNode(
 
         case GT_LE:
         {
-            if (IsBaselineVector512IsaSupportedOpportunistically())
+            if (compOpportunisticallyDependsOn(InstructionSet_EVEX))
             {
                 if ((simdSize == 64) || !varTypeIsFloating(simdBaseType))
                 {
-                    intrinsic                = NI_AVX512F_CompareLessThanOrEqualMask;
+                    intrinsic                = NI_EVEX_CompareLessThanOrEqualMask;
                     needsConvertMaskToVector = true;
                     break;
                 }
@@ -22184,11 +22184,11 @@ GenTree* Compiler::gtNewSimdCmpOpNode(
 
         case GT_LT:
         {
-            if (IsBaselineVector512IsaSupportedOpportunistically())
+            if (compOpportunisticallyDependsOn(InstructionSet_EVEX))
             {
                 if ((simdSize == 64) || varTypeIsUnsigned(simdBaseType))
                 {
-                    intrinsic                = NI_AVX512F_CompareLessThanMask;
+                    intrinsic                = NI_EVEX_CompareLessThanMask;
                     needsConvertMaskToVector = true;
                     break;
                 }
@@ -22446,7 +22446,7 @@ GenTree* Compiler::gtNewSimdCmpOpNode(
     if (needsConvertMaskToVector)
     {
         GenTree* retNode = gtNewSimdHWIntrinsicNode(TYP_MASK, op1, op2, intrinsic, simdBaseJitType, simdSize);
-        return gtNewSimdHWIntrinsicNode(type, retNode, NI_AVX512F_ConvertMaskToVector, simdBaseJitType, simdSize);
+        return gtNewSimdHWIntrinsicNode(type, retNode, NI_EVEX_ConvertMaskToVector, simdBaseJitType, simdSize);
     }
     else
     {

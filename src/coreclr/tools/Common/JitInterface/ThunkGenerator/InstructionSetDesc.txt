@@ -63,6 +63,7 @@ instructionset     ,X86   ,Avx10v1_V512         ,        ,46 ,AVX10v1_V512      
 instructionset     ,X86   ,VectorT128           ,        ,39 ,VectorT128            ,vectort128
 instructionset     ,X86   ,VectorT256           ,        ,40 ,VectorT256            ,vectort256
 instructionset     ,X86   ,VectorT512           ,        ,41 ,VectorT512            ,vectort512
+instructionset     ,X86   ,EVEX                 ,        ,47 ,EVEX                  ,
 
 instructionset64bit,X86   ,X86Base
 instructionset64bit,X86   ,SSE
@@ -96,6 +97,7 @@ instructionset64bit,X86   ,AVX512VBMI_VL
 instructionset64bit,X86   ,AVX10v1
 instructionset64bit,X86   ,AVX10v1_V256
 instructionset64bit,X86   ,AVX10v1_V512
+instructionset64bit,X86   ,EVEX
 
 vectorinstructionset,X86  ,Vector128
 vectorinstructionset,X86  ,Vector256
