@@ -921,7 +921,7 @@ protected:
         // SMALL_IDSC_SIZE is this size, in bytes.
         //
 
-#define SMALL_IDSC_SIZE 8
+#define SMALL_IDSC_SIZE 16
 
     public:
         instrDescDebugInfo* idDebugOnlyInfo() const
