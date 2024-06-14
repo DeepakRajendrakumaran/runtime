@@ -13,7 +13,7 @@ inline bool emitter::instrIs3opImul(instruction ins)
 #ifdef TARGET_X86
     return ((ins >= INS_imul_AX) && (ins <= INS_imul_DI));
 #else // TARGET_AMD64
-    return ((ins >= INS_imul_AX) && (ins <= INS_imul_15));
+    return ((ins >= INS_imul_AX) && (ins <= INS_imul_31));
 #endif
 }
 
@@ -23,7 +23,7 @@ inline bool emitter::instrIsExtendedReg3opImul(instruction ins)
 #ifdef TARGET_X86
     return false;
 #else // TARGET_AMD64
-    return ((ins >= INS_imul_08) && (ins <= INS_imul_15));
+    return ((ins >= INS_imul_08) && (ins <= INS_imul_31));
 #endif
 }
 

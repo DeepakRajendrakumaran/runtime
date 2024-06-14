@@ -145,6 +145,24 @@ INSTMUL(imul_13,        "imul",             IUM_RD, BAD_CODE,     0x4400002868, 
 INSTMUL(imul_14,        "imul",             IUM_RD, BAD_CODE,     0x4400003068, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
 INSTMUL(imul_15,        "imul",             IUM_RD, BAD_CODE,     0x4400003868, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
 
+// Fix op
+INSTMUL(imul_16,        "imul",             IUM_RD, BAD_CODE,     0x4400000068, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
+INSTMUL(imul_17,        "imul",             IUM_RD, BAD_CODE,     0x4400000868, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
+INSTMUL(imul_18,        "imul",             IUM_RD, BAD_CODE,     0x4400001068, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
+INSTMUL(imul_19,        "imul",             IUM_RD, BAD_CODE,     0x4400001868, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
+INSTMUL(imul_20,        "imul",             IUM_RD, BAD_CODE,     0x4400002068, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
+INSTMUL(imul_21,        "imul",             IUM_RD, BAD_CODE,     0x4400002868, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
+INSTMUL(imul_22,        "imul",             IUM_RD, BAD_CODE,     0x4400003068, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
+INSTMUL(imul_23,        "imul",             IUM_RD, BAD_CODE,     0x4400003868, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
+INSTMUL(imul_24,        "imul",             IUM_RD, BAD_CODE,     0x4400000068, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
+INSTMUL(imul_25,        "imul",             IUM_RD, BAD_CODE,     0x4400000868, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
+INSTMUL(imul_26,        "imul",             IUM_RD, BAD_CODE,     0x4400001068, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
+INSTMUL(imul_27,        "imul",             IUM_RD, BAD_CODE,     0x4400001868, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
+INSTMUL(imul_28,        "imul",             IUM_RD, BAD_CODE,     0x4400002068, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
+INSTMUL(imul_29,        "imul",             IUM_RD, BAD_CODE,     0x4400002868, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
+INSTMUL(imul_30,        "imul",             IUM_RD, BAD_CODE,     0x4400003068, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
+INSTMUL(imul_31,        "imul",             IUM_RD, BAD_CODE,     0x4400003868, BAD_CODE,                                INS_TT_NONE,    Writes_OF      | Undefined_SF  | Undefined_ZF  | Undefined_AF  | Undefined_PF  | Writes_CF     | INS_FLAGS_Has_Sbit)
+
 #endif // TARGET_AMD64
 
 // the hex codes in this file represent the instruction encoding as follows:
