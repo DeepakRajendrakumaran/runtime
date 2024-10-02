@@ -2358,7 +2358,6 @@ void Compiler::compSetProcessor()
         instructionSetFlags.AddInstructionSet(InstructionSet_Vector128);
     }
 #endif // TARGET_ARM64
-
     assert(instructionSetFlags.Equals(EnsureInstructionSetFlagsAreValid(instructionSetFlags)));
     opts.setSupportedISAs(instructionSetFlags);
 
@@ -3475,11 +3474,24 @@ void Compiler::compInitOptions(JitFlags* jitFlags)
     rbmFltCalleeTrash   = RBM_FLT_CALLEE_TRASH_INIT;
     cntCalleeTrashFloat = CNT_CALLEE_TRASH_FLOAT_INIT;
 
+    rbmAllInt         = RBM_ALLINT_INIT;
+    rbmIntCalleeTrash = RBM_INT_CALLEE_TRASH_INIT;
+    cntCalleeTrashInt = CNT_CALLEE_TRASH_INT_INIT;
+
     if (canUseEvexEncoding())
     {
         rbmAllFloat |= RBM_HIGHFLOAT;
         rbmFltCalleeTrash |= RBM_HIGHFLOAT;
         cntCalleeTrashFloat += CNT_CALLEE_TRASH_HIGHFLOAT;
+    }
+
+    // TODO-Xarch-apx:
+    // Eventually this should be just isApxSupported
+    if (canUseRex2Encoding())
+    {
+        rbmAllInt |= RBM_HIGHINT;
+        rbmIntCalleeTrash |= RBM_HIGHINT;
+        cntCalleeTrashInt += CNT_CALLEE_TRASH_HIGHINT;
     }
 #endif // TARGET_AMD64
 

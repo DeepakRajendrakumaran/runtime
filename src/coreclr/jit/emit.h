@@ -713,7 +713,7 @@ protected:
         ////////////////////////////////////////////////////////////////////////
         // Space taken up to here:
         // x86:         17 bits
-        // amd64:       17 bits
+        // amd64:       1 bits
         // arm:         16 bits
         // arm64:       21 bits
         // loongarch64: 14 bits
@@ -752,8 +752,8 @@ protected:
         // Note that we use the _idReg1 and _idReg2 fields to hold
         // the live gcrefReg mask for the call instructions on x86/x64
         //
-        regNumber _idReg1 : REGNUM_BITS; // register num
-        regNumber _idReg2 : REGNUM_BITS;
+        // regNumber _idReg1 : REGNUM_BITS; // register num
+        // regNumber _idReg2 : REGNUM_BITS;
 
         ////////////////////////////////////////////////////////////////////////
         // Space taken up to here:
@@ -841,6 +841,8 @@ protected:
         // How many bits have been used beyond the first 32?
         // Define ID_EXTRA_BITFIELD_BITS to that number.
         //
+        regNumber _idReg1 : REGNUM_BITS; // register num
+        regNumber _idReg2 : REGNUM_BITS;
 
 #if defined(TARGET_ARM)
 #define ID_EXTRA_BITFIELD_BITS (16)
@@ -849,7 +851,7 @@ protected:
 #elif defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
 #define ID_EXTRA_BITFIELD_BITS (14)
 #elif defined(TARGET_XARCH)
-#define ID_EXTRA_BITFIELD_BITS (16)
+#define ID_EXTRA_BITFIELD_BITS (18)
 #else
 #error Unsupported or unset target architecture
 #endif
@@ -2518,10 +2520,23 @@ public:
 private:
 #if defined(TARGET_AMD64)
     regMaskTP rbmFltCalleeTrash;
+    regMaskTP rbmAllInt;
 
     FORCEINLINE regMaskTP get_RBM_FLT_CALLEE_TRASH() const
     {
         return this->rbmFltCalleeTrash;
+    }
+
+    regMaskTP rbmIntCalleeTrash;
+
+    FORCEINLINE regMaskTP get_RBM_INT_CALLEE_TRASH() const
+    {
+        return this->rbmIntCalleeTrash;
+    }
+
+    FORCEINLINE regMaskTP get_RBM_ALLINT() const
+    {
+        return this->rbmAllInt;
     }
 #endif // TARGET_AMD64
 
