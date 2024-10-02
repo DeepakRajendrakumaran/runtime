@@ -62,7 +62,12 @@ bool regMaskTP::IsRegNumInMask(regNumber reg, var_types type) const
 //
 void regMaskTP::AddGprRegs(SingleTypeRegSet gprRegs)
 {
+    // TODO-Xarch-apx: Revisit. Cannot access RBM_ALLINT directly anymore. Make eGPRs available.
+#if defined(TARGET_AMD64)
+    assert((gprRegs == RBM_NONE) || ((gprRegs & RBM_ALLINT_STATIC_ALL) != RBM_NONE));
+#else
     assert((gprRegs == RBM_NONE) || ((gprRegs & RBM_ALLINT) != RBM_NONE));
+#endif
     low |= gprRegs;
 }
 
