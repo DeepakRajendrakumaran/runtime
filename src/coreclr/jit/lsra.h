@@ -1368,6 +1368,13 @@ private:
         FORCEINLINE void calculateUnassignedSets();
         FORCEINLINE void reset(Interval* interval, RefPosition* refPosition);
         FORCEINLINE void resetMinimal(Interval* interval, RefPosition* refPosition);
+#if defined(TARGET_AMD64)
+        regMaskTP             rbmAllInt;
+        FORCEINLINE regMaskTP get_RBM_ALLINT() const
+        {
+            return this->rbmAllInt;
+        }
+#endif // TARGET_AMD64
 
 #define REG_SEL_DEF(stat, value, shortname, orderSeqId)      FORCEINLINE void try_##stat();
 #define BUSY_REG_SEL_DEF(stat, value, shortname, orderSeqId) REG_SEL_DEF(stat, value, shortname, orderSeqId)
@@ -2076,6 +2083,8 @@ private:
 #if defined(TARGET_AMD64)
     regMaskTP rbmAllFloat;
     regMaskTP rbmFltCalleeTrash;
+    regMaskTP rbmAllInt;
+    regMaskTP rbmIntCalleeTrash;
 
     FORCEINLINE regMaskTP get_RBM_ALLFLOAT() const
     {
@@ -2084,6 +2093,14 @@ private:
     FORCEINLINE regMaskTP get_RBM_FLT_CALLEE_TRASH() const
     {
         return this->rbmFltCalleeTrash;
+    }
+    FORCEINLINE regMaskTP get_RBM_ALLINT() const
+    {
+        return this->rbmAllInt;
+    }
+    FORCEINLINE regMaskTP get_RBM_INT_CALLEE_TRASH() const
+    {
+        return this->rbmIntCalleeTrash;
     }
 #endif // TARGET_AMD64
 
