@@ -420,6 +420,7 @@ RELEASE_CONFIG_INTEGER(EnableSSE3_4,                W("EnableSSE3_4"),          
 RELEASE_CONFIG_INTEGER(EnableSSE41,                 W("EnableSSE41"),               1) // Allows SSE4.1+ hardware intrinsics to be disabled
 RELEASE_CONFIG_INTEGER(EnableSSE42,                 W("EnableSSE42"),               1) // Allows SSE4.2+ hardware intrinsics to be disabled
 RELEASE_CONFIG_INTEGER(EnableSSSE3,                 W("EnableSSSE3"),               1) // Allows SSSE3+ hardware intrinsics to be disabled
+RELEASE_CONFIG_INTEGER(EnableAPX,                   W("EnableAPX"),                1) // Allows SSSE3+ hardware intrinsics to be disabled
 #elif defined(TARGET_ARM64)
 RELEASE_CONFIG_INTEGER(EnableArm64AdvSimd,          W("EnableArm64AdvSimd"),        1) // Allows Arm64 AdvSimd+ hardware intrinsics to be disabled
 RELEASE_CONFIG_INTEGER(EnableArm64Aes,              W("EnableArm64Aes"),            1) // Allows Arm64 Aes+ hardware intrinsics to be disabled
