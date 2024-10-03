@@ -3447,7 +3447,7 @@ inline SingleTypeRegSet LinearScan::BuildApxIncompatibleGPRMask(GenTree* tree, b
 {
 #if defined(TARGET_AMD64)
 
-    if (!(compiler->canUseRex2Encoding()))
+    if (!(compiler->canUseApxEncodings()))
     {
         return RBM_NONE;
     }

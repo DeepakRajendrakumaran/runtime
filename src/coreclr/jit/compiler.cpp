@@ -3487,7 +3487,7 @@ void Compiler::compInitOptions(JitFlags* jitFlags)
 
     // TODO-Xarch-apx:
     // Eventually this should be just isApxSupported
-    if (canUseRex2Encoding())
+    if (canUseApxEncodings())
     {
         rbmAllInt |= RBM_HIGHINT;
         rbmIntCalleeTrash |= RBM_HIGHINT;
