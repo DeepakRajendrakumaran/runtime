@@ -15931,6 +15931,8 @@ BYTE* emitter::emitOutputRR(BYTE* dst, instrDesc* id)
         code = insCodeRM(ins);
         code = AddX86PrefixIfNeeded(id, code, size);
         code = insEncodeRMreg(id, code);
+        // assert(size == EA_4BYTE);
+        code = AddRexWPrefix(id, code);
 
 #endif // TARGET_AMD64
     }
