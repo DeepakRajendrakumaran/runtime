@@ -1422,6 +1422,12 @@ bool emitter::TakesEvexPrefix(const instrDesc* id) const
         return true;
     }
 
+    if (TakesVexPrefix(ins) && HasExtendedGPReg(id))
+    {
+        // Requires the EVEX encoding to access eGPR
+        return true;
+    }
+
 #if defined(DEBUG)
     if (emitComp->DoJitStressEvexEncoding())
     {
@@ -3793,9 +3799,17 @@ inline unsigned emitter::insEncodeReg012(const instrDesc* id, regNumber reg, emi
         }
         if (reg >= REG_R16 && reg <= REG_R31)
         {
-            // seperate the encoding for REX2.B3/B4, REX2.B3 will be handled in `AddRexBPrefix`.
-            assert(TakesRex2Prefix(id));
-            *code |= 0x001000000000ULL; // REX2.B4
+            if (TakesEvexPrefix(id))
+            {
+                *code |= 0x0008000000000000ULL; // EVEX.B4
+            }
+            else
+            {
+                // seperate the encoding for REX2.B3/B4, REX2.B3 will be handled in `AddRexBPrefix`.
+                assert(TakesRex2Prefix(id));
+                *code |= 0x001000000000ULL; // REX2.B4
+
+            }
         }
     }
     else if ((EA_SIZE(size) == EA_1BYTE) && (reg > REG_RBX) && (code != nullptr))
@@ -3842,9 +3856,17 @@ inline unsigned emitter::insEncodeReg345(const instrDesc* id, regNumber reg, emi
         }
         if (reg >= REG_R16 && reg <= REG_R31)
         {
-            // seperate the encoding for REX2.R3/R4, REX2.R3 will be handled in `AddRexRPrefix`.
-            assert(TakesRex2Prefix(id));
-            *code |= 0x004000000000ULL; // REX2.R4
+            if (TakesEvexPrefix(id))
+            {
+                assert(false);
+                //*code |= 0x0000000000000000ULL; // EVEX.B4
+            }
+            else
+            {
+                // seperate the encoding for REX2.R3/R4, REX2.R3 will be handled in `AddRexRPrefix`.
+                assert(TakesRex2Prefix(id));
+                *code |= 0x004000000000ULL; // REX2.R4
+            }
         }
     }
     else if ((EA_SIZE(size) == EA_1BYTE) && (reg > REG_RBX) && (code != nullptr))
@@ -3890,6 +3912,7 @@ inline emitter::code_t emitter::insEncodeReg3456(const instrDesc* id, regNumber 
     {
         if (TakesEvexPrefix(id) && codeEvexMigrationCheck(code)) // TODO-XArch-AVX512: Remove codeEvexMigrationCheck().
         {
+            assert(isFloatReg(reg));
             assert(hasEvexPrefix(code));
 
 #if defined(TARGET_AMD64)
@@ -3971,9 +3994,16 @@ inline unsigned emitter::insEncodeRegSIB(const instrDesc* id, regNumber reg, cod
         }
         if (reg >= REG_R16 && reg <= REG_R31)
         {
-            // seperate the encoding for REX2.X3/X4, REX2.X3 will be handled in `AddRexXPrefix`.
-            assert(TakesRex2Prefix(id));
-            *code |= 0x002000000000ULL; // REX2.X4
+            if (TakesEvexPrefix(id))
+            {
+                *code |= 0xFFFFFBFFFFFFFFFFULL; // EVEX.X4`
+            }
+            else
+            {
+                // seperate the encoding for REX2.X3/X4, REX2.X3 will be handled in `AddRexXPrefix`.
+                assert(TakesRex2Prefix(id));
+                *code |= 0x002000000000ULL; // REX2.X4
+            }
         }
     }
     unsigned regBits = RegEncoding(reg);
