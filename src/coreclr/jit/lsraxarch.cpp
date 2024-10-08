@@ -3100,11 +3100,11 @@ int LinearScan::BuildCast(GenTreeCast* cast)
             candidates = BuildApxIncompatibleGPRMask(cast, true);
         }
 
-        if (castSize > srcSize)
+        /*if (castSize > srcSize)
         {
             // case 2 : movsdx : SIGN_EXTEND_INT or LOAD_SIGN_EXTEND_INT
             candidates = BuildApxIncompatibleGPRMask(cast, true);
-        }
+        }*/
     }
     // skipping eGPR use for cvt*
     if ((varTypeUsesIntReg(src) || src->isContainedIndir()) && varTypeUsesFloatReg(cast))
@@ -3116,11 +3116,11 @@ int LinearScan::BuildCast(GenTreeCast* cast)
     buildInternalRegisterUses();
     SingleTypeRegSet dstcandidates = RBM_NONE;
     // if (varTypeUsesIntReg(castType) && cast->GetRegNum() == REG_NA)
-    if (varTypeIsFloating(srcType) && !varTypeIsFloating(castType) ||
+    /*if (varTypeIsFloating(srcType) && !varTypeIsFloating(castType) ||
         (varTypeUsesIntReg(castType) && cast->GetRegNum() == REG_NA))
     {
         dstcandidates = BuildApxIncompatibleGPRMask(cast, true);
-    }
+    }*/
     BuildDef(cast, dstcandidates);
 
     return srcCount;
@@ -3140,7 +3140,6 @@ int LinearScan::BuildIndir(GenTreeIndir* indirTree)
     // struct typed indirs are expected only on rhs of a block copy,
     // but in this case they must be contained.
     assert(indirTree->TypeGet() != TYP_STRUCT);
-    SingleTypeRegSet useCandidates = RBM_NONE;
 
 #ifdef FEATURE_SIMD
     if (indirTree->TypeIs(TYP_SIMD12) && indirTree->OperIs(GT_STOREIND) &&
@@ -3149,17 +3148,12 @@ int LinearScan::BuildIndir(GenTreeIndir* indirTree)
         // GT_STOREIND needs an internal register so the upper 4 bytes can be extracted
         buildInternalFloatRegisterDefForNode(indirTree);
     }
-    if (/* varTypeIsSIMD(indirTree) && */ varTypeUsesIntReg(indirTree->Addr()))
-    {
-        useCandidates = BuildApxIncompatibleGPRMask(indirTree->Addr(), true);
-    }
 #endif // FEATURE_SIMD
 
-    int srcCount = BuildIndirUses(indirTree, useCandidates);
+    int srcCount = BuildIndirUses(indirTree);
     if (indirTree->gtOper == GT_STOREIND)
     {
         GenTree* source = indirTree->gtGetOp2();
-
         if (indirTree->AsStoreInd()->IsRMWMemoryOp())
         {
             // Because 'source' is contained, we haven't yet determined its special register requirements, if any.

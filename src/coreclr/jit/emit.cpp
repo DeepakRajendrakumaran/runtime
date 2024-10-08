@@ -4434,6 +4434,18 @@ size_t emitter::emitIssue1Instr(insGroup* ig, instrDesc* id, BYTE** dp)
     unsigned estimatedSize = id->idCodeSize();
     if (actualSize != estimatedSize)
     {
+#ifdef TARGET_AMD64
+        if(id->idIns() == INS_movsxd)
+        {
+            printf("\nDeepak IN actualSize = %d, estimatedSize = %d \n", actualSize, estimatedSize);
+
+        }
+        else
+        {
+            printf("\nDeepak OUT actualSize = %d, estimatedSize = %d \n", actualSize, estimatedSize);
+
+        }
+#endif
         // It is fatal to under-estimate the instruction size, except for alignment instructions
         noway_assert(estimatedSize >= actualSize);
 
