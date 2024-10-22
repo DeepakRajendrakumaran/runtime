@@ -888,7 +888,12 @@ NamedIntrinsic HWIntrinsicInfo::lookupId(Compiler*         comp,
         else
         {
             assert(sortOrder == 0);
-            assert((intrinsicInfo.numArgs == -1) || (sig->numArgs == static_cast<uint8_t>(intrinsicInfo.numArgs)));
+            //assert((intrinsicInfo.numArgs == -1) || (sig->numArgs == static_cast<uint8_t>(intrinsicInfo.numArgs)));
+            if (!((intrinsicInfo.numArgs == -1) || (sig->numArgs == static_cast<uint8_t>(intrinsicInfo.numArgs))))
+            {
+                return NI_Illegal;
+            }
+
 
 #if defined(TARGET_XARCH)
             // on AVX1-only CPUs we only support a subset of intrinsics in Vector256
