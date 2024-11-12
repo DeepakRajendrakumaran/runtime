@@ -106,9 +106,9 @@ static uint32_t avx512StateSupport()
 static uint32_t apxStateSupport()
 {
 #if defined(HOST_APPLE)
-    return false;
+    return 0;
 #elif defined(TARGET_X86)
-    return false;
+    return 0;
 #else
     uint32_t eax;
     __asm("  xgetbv\n" \
@@ -155,14 +155,10 @@ static uint32_t avx512StateSupport()
     return ((_xgetbv(0) & 0xE6) == 0x0E6) ? 1 : 0;
 }
 
-#ifndef XSTATE_MASK_APX
-#define XSTATE_MASK_APX (0x80000)
-#endif // XSTATE_MASK_APX
-
 static uint32_t apxStateSupport()
 {
 #if defined(TARGET_X86)
-    return false;
+    return 0;
 #else
     return ((_xgetbv(0) & 0x80000) == 0x80000) ? 1 : 0;
 #endif
@@ -180,10 +176,20 @@ static bool IsAvx512Enabled()
     return ((FeatureMask & XSTATE_MASK_AVX512) != 0);
 }
 
+// TODO-XArch-APX:
+// we will eventually need to remove this macro when windows officially supports APX.
+#ifndef XSTATE_MASK_APX
+#define XSTATE_MASK_APX (0x80000)
+#endif // XSTATE_MASK_APX
+
 static bool IsApxEnabled()
 {
+#ifdef TARGET_X86
+    return false;
+#else
     DWORD64 FeatureMask = GetEnabledXStateFeatures();
     return ((FeatureMask & XSTATE_MASK_APX) != 0);
+#endif
 }
 
 #endif // defined(HOST_X86) || defined(HOST_AMD64)
