@@ -9895,10 +9895,12 @@ public:
     //
     bool canUseApxEncodings() const
     {
+#ifdef DEBUG
         if(JitConfig.JitBypassAPXCheck())
         {
             return true;
         }
+#endif
         return compOpportunisticallyDependsOn(InstructionSet_APX);
     }
 
