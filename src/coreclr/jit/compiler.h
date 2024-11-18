@@ -9952,7 +9952,7 @@ public:
     bool canUseRex2Encoding() const
     {
 #ifdef DEBUG
-        if(JitConfig.JitBypassAPXCheck())
+        if (JitConfig.JitBypassAPXCheck())
         {
             return true;
         }
@@ -9996,7 +9996,7 @@ private:
         return false;
     }
 
-//------------------------------------------------------------------------
+    //------------------------------------------------------------------------
     // DoJitStressRex2Encoding- Answer the question: Do we force REX2 encoding.
     //
     // Returns:
@@ -11723,8 +11723,6 @@ public:
         return this->cntCalleeTrashMask;
     }
 #endif // TARGET_XARCH
-
-
 
 }; // end of class Compiler
 
