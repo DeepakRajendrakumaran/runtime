@@ -6280,8 +6280,8 @@ void emitter::emitIns_R(instruction ins, emitAttr attr, regNumber reg, insOpts i
     noway_assert(emitVerifyEncodable(ins, size, reg));
 
     UNATIVE_OFFSET sz;
-    instrDesc*     id = emitNewInstrSmall(attr);
-    insFormat fmt = emitInsModeFormat(ins, IF_RRD);
+    instrDesc*     id  = emitNewInstrSmall(attr);
+    insFormat      fmt = emitInsModeFormat(ins, IF_RRD);
 
     id->idIns(ins);
     id->idInsFmt(fmt);
