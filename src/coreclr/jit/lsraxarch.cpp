@@ -3051,8 +3051,8 @@ int LinearScan::BuildCast(GenTreeCast* cast)
     buildInternalRegisterUses();
     SingleTypeRegSet dstcandidates = RBM_NONE;
     // if (varTypeUsesIntReg(castType) && cast->GetRegNum() == REG_NA)
-    if (varTypeIsFloating(srcType) && !varTypeIsFloating(castType) ||
-        (varTypeUsesIntReg(castType) && cast->GetRegNum() == REG_NA))
+    if ((varTypeIsFloating(srcType) && !varTypeIsFloating(castType)) ||
+        ((varTypeUsesIntReg(castType) && cast->GetRegNum() == REG_NA)))
     {
         dstcandidates = BuildApxIncompatibleGPRMask(cast, true);
     }
