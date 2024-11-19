@@ -1863,8 +1863,7 @@ bool emitter::HasMaskReg(const instrDesc* id) const
 bool IsExtendedReg(regNumber reg)
 {
 #ifdef TARGET_AMD64
-    // TODO-XArch-apx: extend the gpr test, extended gprs should be from r8 to r31 after apx.
-    return ((reg >= REG_R8) && (reg <= REG_R15)) || ((reg >= REG_XMM8) && (reg <= REG_XMM31));
+    return ((reg >= REG_R8) && (reg <= REG_R31)) || ((reg >= REG_XMM8) && (reg <= REG_XMM31));
 #else
     // X86 JIT operates in 32-bit mode and hence extended reg are not available.
     return false;
@@ -1893,10 +1892,7 @@ bool emitter::IsExtendedGPReg(regNumber reg) const
 
     if (UseRex2Encoding())
     {
-        /*
-            include EGPR checks here.
-        */
-        // return (reg >= REG_R16) && (reg <= REG_31)
+        return (reg >= REG_R16) && (reg <= REG_R31);
     }
 #endif
     return false;
@@ -3571,7 +3567,7 @@ inline unsigned emitter::insEncodeReg012(const instrDesc* id, regNumber reg, emi
         {
             *code = AddRexBPrefix(id, *code); // REX.B
         }
-        if (false /*reg >= REG_R16 && reg <= REG_R31*/)
+        if (reg >= REG_R16 && reg <= REG_R31)
         {
             // TODO-XArch-APX:
             // seperate the encoding for REX2.B3/B4, REX2.B3 will be handled in `AddRexBPrefix`.
@@ -3621,7 +3617,7 @@ inline unsigned emitter::insEncodeReg345(const instrDesc* id, regNumber reg, emi
         {
             *code = AddRexRPrefix(id, *code); // REX.R
         }
-        if (false /*reg >= REG_R16 && reg <= REG_R31*/)
+        if (reg >= REG_R16 && reg <= REG_R31)
         {
             // TODO-XArch-APX:
             // seperate the encoding for REX2.R3/R4, REX2.R3 will be handled in `AddRexRPrefix`.
@@ -3733,7 +3729,7 @@ inline unsigned emitter::insEncodeRegSIB(const instrDesc* id, regNumber reg, cod
         {
             *code = AddRexXPrefix(id, *code); // REX.X
         }
-        if (false /*reg >= REG_R16 && reg <= REG_R31*/)
+        if (reg >= REG_R16 && reg <= REG_R31)
         {
             // TODO-XArch-APX:
             // seperate the encoding for REX2.X3/X4, REX2.X3 will be handled in `AddRexXPrefix`.
@@ -4393,7 +4389,7 @@ inline UNATIVE_OFFSET emitter::emitInsSizeSV(instrDesc* id, code_t code, int var
 static bool baseRegisterRequiresSibByte(regNumber base)
 {
 #ifdef TARGET_AMD64
-    return base == REG_ESP || base == REG_R12;
+    return base == REG_ESP || base == REG_R12 || base == REG_R20 || base == REG_R28;
 #else
     return base == REG_ESP;
 #endif
@@ -4402,7 +4398,7 @@ static bool baseRegisterRequiresSibByte(regNumber base)
 static bool baseRegisterRequiresDisplacement(regNumber base)
 {
 #ifdef TARGET_AMD64
-    return base == REG_EBP || base == REG_R13;
+    return base == REG_EBP || base == REG_R13 || base == REG_R21 || base == REG_R29;
 #else
     return base == REG_EBP;
 #endif
@@ -5913,6 +5909,11 @@ void emitter::emitIns_R(instruction ins, emitAttr attr, regNumber reg)
 
     UNATIVE_OFFSET sz;
     instrDesc*     id = emitNewInstrSmall(attr);
+    insFormat fmt = emitInsModeFormat(ins, IF_RRD);
+
+    id->idIns(ins);
+    id->idInsFmt(fmt);
+    id->idReg1(reg);
 
     switch (ins)
     {
@@ -5974,11 +5975,6 @@ void emitter::emitIns_R(instruction ins, emitAttr attr, regNumber reg)
                 break;
             }
     }
-    insFormat fmt = emitInsModeFormat(ins, IF_RRD);
-
-    id->idIns(ins);
-    id->idInsFmt(fmt);
-    id->idReg1(reg);
 
     // Vex bytes
     sz += emitGetAdjustedSize(id, insEncodeMRreg(id, reg, attr, insCodeMR(ins)));
