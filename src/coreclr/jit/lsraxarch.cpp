@@ -1343,19 +1343,9 @@ int LinearScan::BuildCall(GenTreeCall* call)
             // Don't assign the call target to any of the argument registers because
             // we will use them to also pass floating point arguments as required
             // by Amd64 ABI.
-            ctrlExprCandidates = BuildApxIncompatibleGPRMask(ctrlExpr, true) & ~(RBM_ARG_REGS.GetIntRegSet());
-        }
-#if defined(TARGET_AMD64)
-        if (ctrlExprCandidates == RBM_NONE)
-        {
-            ctrlExprCandidates = BuildApxIncompatibleGPRMask(ctrlExpr, true);
-        }
-        else
-        {
-            ctrlExprCandidates = ctrlExprCandidates & ~(RBM_HIGHINT.GetIntRegSet());
+            ctrlExprCandidates = availableIntRegs & ~(RBM_ARG_REGS.GetIntRegSet());
         }
 
-#endif // TARGET_AMD64
         srcCount += BuildOperandUses(ctrlExpr, ctrlExprCandidates);
     }
 
@@ -3084,10 +3074,10 @@ int LinearScan::BuildIndir(GenTreeIndir* indirTree)
         // GT_STOREIND needs an internal register so the upper 4 bytes can be extracted
         buildInternalFloatRegisterDefForNode(indirTree);
     }
-    if (/* varTypeIsSIMD(indirTree) && */ varTypeUsesIntReg(indirTree->Addr()))
+    /*if (varTypeUsesIntReg(indirTree->Addr()))
     {
         useCandidates = BuildApxIncompatibleGPRMask(indirTree->Addr(), true);
-    }
+    }*/
 #endif // FEATURE_SIMD
 
     int srcCount = BuildIndirUses(indirTree, useCandidates);
