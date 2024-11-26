@@ -1,0 +1,69 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Superpmi",
+            "type": "cppvsdbg",
+            "request": "launch",
+            // "program": "${workspaceFolder}/artifacts/tests/coreclr/windows.x64.Debug/Tests/Core_Root/superpmi.exe",
+            "program": "C:\\Users\\deepakra\\Dotnet\\runtime\\artifacts\\tests\\coreclr\\windows.x64.Debug\\Tests\\Core_Root\\superpmi.exe",
+            "args": [
+                //"C:\\Users\\deepakra\\Dotnet\\runtime\\artifacts\\tests\\coreclr\\windows.x64.Debug\\JIT\\HardwareIntrinsics\\HardwareIntrinsics_X86_Avx_r\\HardwareIntrinsics_X86_Avx_r.dll"
+                "-compile", "633750",
+                "C:\\Users\\deepakra\\Dotnet\\runtime\\artifacts\\tests\\coreclr\\windows.x64.Debug\\Tests\\Core_Root\\clrjit.dll",
+                "C:\\Users\\deepakra\\Dotnet\\runtime\\artifacts\\spmi\\mch\\381fc250-b8f3-4cee-834e-b0bc682a09f2.windows.x64\\libraries_tests.run.windows.x64.Release.mch",
+                "-jitoption"," JitDump=*",
+                "-jitoption", "JitLsraStats=2",
+                "-jitoption", "JitBypassApxCheck=1",
+               // "-jitoption", "EnableAPX=1",
+              //"-jitoption", "JitStdOutFile=C:\\Users\\deepakra\\Dotnet\\APX\\Files\\outdiff_on.csv"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [
+                {"name": "DOTNET_JitDump", "value": "*ctor*"},
+                //{"name": "DOTNET_JitDisasm", "value": "*IL_STUB_StructMarshal*"},
+                //{"name": "DOTNET_JitDisasmWithCodeBytes", "value": "1"},
+              //  {"name": "DOTNET_JitBreak", "value": "*IL_STUB_StructMarshal*"},
+       //         {"name": "DOTNET_JitStressRegs", "value": "0x4000"},
+                //{"name": "DOTNET_JitStressRegs", "value": "0x0000"},
+                {"name": "DOTNET_TieredCompilation", "value": "0"},
+                //{"name": "DOTNET_JitLateDisasm", "value": "*"},
+                //{"name": "DOTNET_JitDisasmWithCodeBytes", "value": "1"},
+                //{"name": "DOTNET_JitEnableAPXNDD", "value": "1"},
+               // {"name": "DOTNET_AltJit", "value": "*"},
+                //{"name": "DOTNET_AltJitName", "value": "clrjit_unix_x64_x64.dll"},
+                //{"name": "Core_root", "value": "C:\\Users\\deepakra\\Dotnet\\runtime\\artifacts\\tests\\coreclr\\windows.x64.Debug\\Tests\\Core_Root"},
+                //{"name": "DOTNET_JitLsraStats", "value": "2"},
+                //{"name": "DOTNET_JitStdOutFile", "value": "C:\\Users\\deepakra\\Dotnet\\runtime\\outWoth.csv"},
+                //{"name": "DOTNET_MaxVectorTBitwidth", "value": "128"},
+                // {"name": "DOTNET_UseLBRSamling", "value": "1"},
+                // {"name": "DOTNET_UseLBRSamlingEx", "value": "1"},
+                // {"name": "DOTNET_UseLBRSampling", "value": "1"},
+                // // {"name": "COMPlus_JitDump", "value":"*"},
+                // // {"name": "DOTNET_JitDisasmDiffable", "value": "1"},
+   //             {"name": "DOTNET_JitEmitUnitTests", "value": "*"},
+    //            {"name": "DOTNET_JitEmitUnitTestsSections","value": "apx"},
+    //            {"name": "DOTNET_MaxVectorTBitWidth", "value": "128"},
+                //{"name": "DOTNET_JitStressRex2Encoding", "value": "1"},
+                // {"name": "DOTNET_JitDisasmWithCodeBytes", "value": "1"},
+                // {"name": "DOTNET_JitEmitUnitTestsSections", "value": "apx"},
+                // {"name": "DOTNET_JitEmitUnitTests", "value": "*"},
+                // {"name": "DOTNET_JitLateDisasm", "value": "*"},
+                // {"name": "DOTNET_EnableAvx", "value": "0"},
+                // {"name": "DOTNET_TieredCompilation", "value": "0"},
+                // {"name": "DOTNET_MaxVectorTBitWidth", "value": "512"},
+                // {"name": "DOTNET_PreferredVectorBitWidth", "value": "512"},
+                // {"name": "DOTNET_EnableAvx10v1_256", "value": "0"},
+                // {"name": "JitAggressiveInlining", "value": "1"}
+                // {"name": "COMPlus_TieredPGO", "value": "1"},
+                // {"name": "COMPlus_JitClassProfiling", "value": "1"},
+                // {"name": "COMPlus_JitEnableGuardedDevirtualization", "value": "1"}
+            ],
+            "console": "integratedTerminal"
+        }
+    ]
+}
