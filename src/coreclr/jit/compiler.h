@@ -10004,7 +10004,7 @@ public:
     {
         if (JitConfig.EnableAPX() == 0)
         {
-            return false;
+            return true;
         }
 
         return compOpportunisticallyDependsOn(InstructionSet_APX);
