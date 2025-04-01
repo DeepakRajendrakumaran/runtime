@@ -9850,6 +9850,12 @@ public:
     //
     bool canUseEvexEncoding() const
     {
+    #ifdef DEBUG
+        if (JitConfig.JitBypassApxCheck())
+        {
+            return true;
+        }
+#endif
         return (compOpportunisticallyDependsOn(InstructionSet_EVEX));
     }
 
