@@ -2856,14 +2856,14 @@ def write_asmdiffs_markdown_summary(write_fh, base_jit_options, diff_jit_options
             sum_diff = sum(diff_metrics[row]["Diffed code bytes"] for (_, _, diff_metrics, _, _, _) in asm_diffs)
 
             with DetailsSection(write_fh, "{} ({} bytes)".format(row, format_delta(sum_base, sum_diff))):
-                write_fh.write("|Collection|Base size (bytes)|Diff size (bytes)|PerfScore in Diffs|Base Instruction Count|Diff Instruction Count\n")
-                write_fh.write("|---|--:|--:|--:|--:|--:|\n")
+                write_fh.write("|Collection|Base size (bytes)|Diff size (bytes)|PerfScore in Diffs|Base Instruction Count|Diff Instruction Count |Instruction Count Difference |% Difference |% Difference Non Zero | \n")
+                write_fh.write("|---|--:|--:|--:|--:|--:|--:|--:|--:|\n")
                 for (mch_file, base_metrics, diff_metrics, _, _, _) in asm_diffs:
                     # Exclude this particular row?
                     if not has_diffs(diff_metrics[row]):
                         continue
 
-                    write_fh.write("|{}|{:,d}|{}|{}|{}|{}({})({})|\n".format(
+                    write_fh.write("|{}|{:,d}|{}|{}|{}|{}|{}|{}|{}|\n".format(
                         mch_file,
                         base_metrics[row]["Diffed code bytes"],
                         format_delta(
@@ -2871,6 +2871,7 @@ def write_asmdiffs_markdown_summary(write_fh, base_jit_options, diff_jit_options
                             diff_metrics[row]["Diffed code bytes"]),
                         format_pct(diff_metrics[row]["Relative PerfScore Geomean (Diffs)"] * 100 - 100),
                         base_metrics[row]["Instruction Count"],
+                        diff_metrics[row]["Instruction Count"]),
                         format_delta(
                             base_metrics[row]["Instruction Count"],
                             diff_metrics[row]["Instruction Count"]),
