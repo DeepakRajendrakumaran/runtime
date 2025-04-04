@@ -294,3 +294,11 @@ class CoreclrArguments:
                     "product_location",
                     check_and_return_default_product_location,
                     "Error, incorrect product_location.")
+
+        # Add this block to handle the 'details' argument
+        self.verify(
+            args,
+            "details",
+            lambda details: True,  # No specific validation, just accept the value if provided
+            "Error: Invalid details argument."
+        )
