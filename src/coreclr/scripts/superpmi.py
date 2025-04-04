@@ -2582,6 +2582,8 @@ class SuperPMIReplayAsmDiffs:
             summarizable_asm_diffs = self.create_summarizable_asm_diffs(asm_diffs)
             (base_jit_options, diff_jit_options) = get_base_diff_jit_options(self.coreclr_args)
 
+            write_asmdiffs_csv_summary(self.coreclr_args.details, summarizable_asm_diffs)
+
             if self.coreclr_args.summary_as_json:
                 overall_json_summary_file = create_unique_file_name(self.coreclr_args.spmi_location, "diff_summary", "json")
                 if os.path.isfile(overall_json_summary_file):
@@ -2793,6 +2795,53 @@ class SuperPMIReplayAsmDiffs:
         final_contexts_indices = list(set(int(r["Context"]) for r in contexts))
         final_contexts_indices.sort()
         return (final_contexts_indices, examples)
+
+def write_asmdiffs_csv_summary(csv_file_path, asm_diffs):
+    """ Write a CSV summary file of the diffs that were found.
+
+    Args:
+        csv_file_path : path to the CSV file to output to
+        asm_diffs     : list of tuples: (mch_name, base_metrics, diff_metrics, diffs_info, jit_analyze_summary, examples_to_put_in_summary)
+    """
+    import csv
+
+    with open(csv_file_path, mode='w', newline='', encoding='utf-8') as csv_file:
+        writer = csv.writer(csv_file)
+
+        # Write the header row
+        writer.writerow([
+            "Collection",
+            "Base size (bytes)",
+            "Diff size (bytes)",
+            "PerfScore in Diffs",
+            "Base Instruction Count",
+            "Diff Instruction Count",
+            "Instruction Count Difference",
+            "% Instruction Count Difference",
+            "% Instruction Count Difference (Ignoring Zero diffs)"
+        ])
+
+        # Write the data rows
+        for (mch_file, base_metrics, diff_metrics, _, _, _) in asm_diffs:
+            if base_metrics and diff_metrics:
+                writer.writerow([
+                    mch_file,
+                    base_metrics["Overall"]["Diffed code bytes"],
+                    diff_metrics["Overall"]["Diffed code bytes"],
+                    # format_pct(diff_metrics["Overall"]["Relative PerfScore Geomean (Diffs)"] * 100 - 100),
+                    (diff_metrics["Overall"]["Relative PerfScore Geomean (Diffs)"] * 100 - 100),
+                    base_metrics["Overall"]["Instruction Count"],
+                    diff_metrics["Overall"]["Instruction Count"],
+                     diff_metrics["Overall"]["Instruction Count"] - base_metrics["Overall"]["Instruction Count"],
+                    (
+                        ((diff_metrics["Overall"]["Instruction Count"] - base_metrics["Overall"]["Instruction Count"]) * 100) /
+                        base_metrics["Overall"]["Base with Diff Instruction Count"]
+                    ),
+                    (
+                        ((diff_metrics["Overall"]["Instruction Count"] - base_metrics["Overall"]["Instruction Count"]) * 100) /
+                        base_metrics["Overall"]["Base with Diff Instruction Count Non Zero"]
+                    )
+                ])
 
 def write_asmdiffs_markdown_summary(write_fh, base_jit_options, diff_jit_options, asm_diffs, include_details):
     """ Write a markdown summary file of the diffs that were found.
