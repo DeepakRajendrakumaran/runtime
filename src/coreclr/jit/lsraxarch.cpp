@@ -1958,6 +1958,7 @@ int LinearScan::BuildIntrinsic(GenTree* tree)
     assert(varTypeIsFloating(op1));
     assert(op1->TypeGet() == tree->TypeGet());
     RefPosition* internalFloatDef = nullptr;
+    bool useEvex = compiler->canUseEvexEncoding();
 
     switch (tree->AsIntrinsic()->gtIntrinsicName)
     {
@@ -1999,11 +2000,22 @@ int LinearScan::BuildIntrinsic(GenTree* tree)
     {
         SingleTypeRegSet op1RegCandidates = RBM_NONE;
 
-        // NI_System_Math_Abs is the only one likely to use a GPR
-        op1RegCandidates = BuildApxIncompatibleGPRMask(op1, op1RegCandidates);
-        if (op1RegCandidates == RBM_NONE)
+        // op1RegCandidates = BuildApxIncompatibleGPRMask(op1, op1RegCandidates);
+        if (!useEvex)
         {
-            op1RegCandidates = BuildEvexIncompatibleMask(op1);
+            switch (tree->AsIntrinsic()->gtIntrinsicName)
+            {
+                case NI_System_Math_Ceiling:
+                case NI_System_Math_Floor:
+                {
+                    op1RegCandidates = BuildApxIncompatibleGPRMask(op1);
+                    break;
+                }
+                default:
+                {
+                    op1RegCandidates = BuildEvexIncompatibleMask(op1);
+                }
+            }
         }
 
         srcCount = BuildOperandUses(op1, op1RegCandidates);
@@ -2017,7 +2029,13 @@ int LinearScan::BuildIntrinsic(GenTree* tree)
     {
         buildInternalRegisterUses();
     }
-    BuildDef(tree, BuildEvexIncompatibleMask(tree));
+    if (useEvex)
+    {
+        BuildDef(tree);
+    }
+    else {
+        BuildDef(tree, BuildEvexIncompatibleMask(tree));
+    }
     return srcCount;
 }
 
