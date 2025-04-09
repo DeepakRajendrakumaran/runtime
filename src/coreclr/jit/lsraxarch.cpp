@@ -1399,6 +1399,7 @@ int LinearScan::BuildBlockStore(GenTreeBlk* blkNode)
     SingleTypeRegSet dstAddrRegMask = RBM_NONE;
     SingleTypeRegSet srcRegMask     = RBM_NONE;
     SingleTypeRegSet sizeRegMask    = RBM_NONE;
+    bool useEvex = compiler->canUseEvexEncoding();
 
     RefPosition* internalIntDef = nullptr;
 #ifdef TARGET_X86
@@ -1469,8 +1470,7 @@ int LinearScan::BuildBlockStore(GenTreeBlk* blkNode)
             case GenTreeBlk::BlkOpKindLoop:
                 // Needed for offsetReg
                 // TODO-XArch-apx: Revert. We vectorized these. Cannot use eGPR currently
-                buildInternalIntRegisterDefForNode(blkNode,
-                                                   BuildApxIncompatibleGPRMask(blkNode, availableIntRegs, true));
+                buildInternalIntRegisterDefForNode(blkNode,availableIntRegs);
                 break;
 
             default:
@@ -1519,7 +1519,8 @@ int LinearScan::BuildBlockStore(GenTreeBlk* blkNode)
                     // or if are but the remainder is a power of 2 and less than the
                     // size of a register
 
-                    SingleTypeRegSet regMask = BuildApxIncompatibleGPRMask(blkNode, availableIntRegs, true);
+                    // SingleTypeRegSet regMask = BuildApxIncompatibleGPRMask(blkNode, availableIntRegs, true);
+                    SingleTypeRegSet regMask = availableIntRegs;
 #ifdef TARGET_X86
                     if ((size & 1) != 0)
                     {
@@ -1576,16 +1577,13 @@ int LinearScan::BuildBlockStore(GenTreeBlk* blkNode)
                 else if (isPow2(size))
                 {
                     // Single GPR for 1,2,4,8
-                    buildInternalIntRegisterDefForNode(blkNode,
-                                                       BuildApxIncompatibleGPRMask(blkNode, availableIntRegs, true));
+                    buildInternalIntRegisterDefForNode(blkNode,availableIntRegs);
                 }
                 else
                 {
                     // Any size from 3 to 15 can be handled via two GPRs
-                    buildInternalIntRegisterDefForNode(blkNode,
-                                                       BuildApxIncompatibleGPRMask(blkNode, availableIntRegs, true));
-                    buildInternalIntRegisterDefForNode(blkNode,
-                                                       BuildApxIncompatibleGPRMask(blkNode, availableIntRegs, true));
+                    buildInternalIntRegisterDefForNode(blkNode,availableIntRegs);
+                    buildInternalIntRegisterDefForNode(blkNode,availableIntRegs);
                 }
             }
             break;
@@ -1619,11 +1617,25 @@ int LinearScan::BuildBlockStore(GenTreeBlk* blkNode)
     if (!dstAddr->isContained())
     {
         useCount++;
-        BuildUse(dstAddr, BuildApxIncompatibleGPRMask(dstAddr, dstAddrRegMask));
+        if (useEvex)
+        {
+            BuildUse(dstAddr, dstAddrRegMask);
+        }
+        else
+        {
+            BuildUse(dstAddr, BuildApxIncompatibleGPRMask(dstAddr, dstAddrRegMask));
+        }
     }
     else if (dstAddr->OperIsAddrMode())
     {
-        useCount += BuildAddrUses(dstAddr, BuildApxIncompatibleGPRMask(dstAddr));
+        if (useEvex)
+        {
+            useCount += BuildAddrUses(dstAddr);
+        }
+        else
+        {
+            useCount += BuildAddrUses(dstAddr, BuildApxIncompatibleGPRMask(dstAddr));
+        }
     }
 
     if (srcAddrOrFill != nullptr)
@@ -1631,11 +1643,25 @@ int LinearScan::BuildBlockStore(GenTreeBlk* blkNode)
         if (!srcAddrOrFill->isContained())
         {
             useCount++;
-            BuildUse(srcAddrOrFill, BuildApxIncompatibleGPRMask(srcAddrOrFill, srcRegMask));
+            if (useEvex)
+            {
+                BuildUse(srcAddrOrFill);
+            }
+            else
+            {
+                BuildUse(srcAddrOrFill, BuildApxIncompatibleGPRMask(srcAddrOrFill, srcRegMask));
+            }
         }
         else if (srcAddrOrFill->OperIsAddrMode())
         {
-            useCount += BuildAddrUses(srcAddrOrFill, BuildApxIncompatibleGPRMask(srcAddrOrFill));
+            if (useEvex)
+            {
+                useCount += BuildAddrUses(srcAddrOrFill);
+            }
+            else
+            {
+                useCount += BuildAddrUses(srcAddrOrFill, BuildApxIncompatibleGPRMask(srcAddrOrFill));
+            }
         }
     }
 
