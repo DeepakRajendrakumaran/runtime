@@ -3839,18 +3839,23 @@ int LinearScan::BuildBinaryUses(GenTreeOp* node, SingleTypeRegSet candidates)
     GenTree* op1 = node->gtGetOp1();
     GenTree* op2 = node->gtGetOp2IfPresent();
 #ifdef TARGET_XARCH
+    const bool canUseApxRegs = compiler->canUseApxEncoding() && compiler->canUseEvexEncoding();
     if (node->OperIsBinary() && isRMWRegOper(node))
     {
         assert(op2 != nullptr);
         if (candidates == RBM_NONE && varTypeUsesFloatReg(node) && (op1->isContainedIndir() || op2->isContainedIndir()))
         {
-            if (op1->isContainedIndir())
+            if (op1->isContainedIndir() && !canUseApxRegs)
             {
                 return BuildRMWUses(node, op1, op2, lowGprRegs, candidates);
             }
-            else
+            else if (op2->isContainedIndir() && !canUseApxRegs)
             {
                 return BuildRMWUses(node, op1, op2, candidates, lowGprRegs);
+            }
+            else
+            {
+                return BuildRMWUses(node, op1, op2, candidates, candidates);
             }
         }
         return BuildRMWUses(node, op1, op2, candidates, candidates);
@@ -3861,9 +3866,7 @@ int LinearScan::BuildBinaryUses(GenTreeOp* node, SingleTypeRegSet candidates)
     {
 #ifdef TARGET_XARCH
         // BSWAP creates movbe
-        if (op1->isContainedIndir() &&
-            ((varTypeUsesFloatReg(node) || node->OperGet() == GT_BSWAP || node->OperGet() == GT_BSWAP16)) &&
-            candidates == RBM_NONE)
+        if (op1->isContainedIndir() && candidates == RBM_NONE && !canUseApxRegs)
         {
             srcCount += BuildOperandUses(op1, lowGprRegs);
         }
@@ -3877,7 +3880,7 @@ int LinearScan::BuildBinaryUses(GenTreeOp* node, SingleTypeRegSet candidates)
     {
 
 #ifdef TARGET_XARCH
-        if (op2->isContainedIndir() && varTypeUsesFloatReg(op1) && candidates == RBM_NONE)
+        if (op2->isContainedIndir() && candidates == RBM_NONE && !canUseApxRegs)
         {
             candidates = lowGprRegs;
         }
@@ -3939,7 +3942,6 @@ void LinearScan::BuildStoreLocDef(GenTreeLclVarCommon* storeLoc,
     unsigned  varIndex       = varDsc->lvVarIndex;
     Interval* varDefInterval = getIntervalForLocalVar(varIndex);
 
-    GenTree* op1 = storeLoc->gtGetOp1();
     if (!storeLoc->IsLastUse(index))
     {
         VarSetOps::AddElemD(compiler, currentLiveVars, varIndex);
@@ -3979,14 +3981,6 @@ void LinearScan::BuildStoreLocDef(GenTreeLclVarCommon* storeLoc,
 #else
     defCandidates = allRegs(type);
 #endif // TARGET_X86
-
-#ifdef TARGET_AMD64
-    if (op1->isContained() && op1->OperIs(GT_BITCAST) && varTypeUsesIntReg(varDsc->GetRegisterType(storeLoc)))
-    {
-        defCandidates = lowGprRegs;
-    }
-
-#endif // TARGET_AMD64
 
     RefPosition* def = newRefPosition(varDefInterval, currentLoc + 1, RefTypeDef, storeLoc, defCandidates, index);
     if (varDefInterval->isWriteThru)
@@ -4153,18 +4147,7 @@ int LinearScan::BuildStoreLoc(GenTreeLclVarCommon* storeLoc)
     {
         GenTree*         bitCastSrc   = op1->gtGetOp1();
         RegisterType     registerType = regType(bitCastSrc->TypeGet());
-        SingleTypeRegSet candidates   = RBM_NONE;
-#ifdef TARGET_AMD64
-        if (registerType == IntRegisterType)
-        {
-            candidates = lowGprRegs;
-        }
-        else
-#endif // TARGET_AMD64
-        {
-            candidates = allRegs(registerType);
-        }
-        singleUseRef = BuildUse(bitCastSrc, candidates);
+        singleUseRef = BuildUse(bitCastSrc, allRegs(registerType));
 
         Interval* srcInterval = singleUseRef->getInterval();
         assert(regType(srcInterval->registerType) == registerType);
@@ -4246,16 +4229,8 @@ int LinearScan::BuildSimple(GenTree* tree)
     }
     if (tree->IsValue())
     {
-#ifdef TARGET_AMD64
-        if ((tree->OperGet() == GT_BSWAP || tree->OperGet() == GT_BSWAP16) && varTypeUsesIntReg(tree))
-        {
-            BuildDef(tree, lowGprRegs);
-        }
-        else
-#endif // TARGET_AMD64
-        {
-            BuildDef(tree);
-        }
+        BuildDef(tree);
+
     }
     return srcCount;
 }
