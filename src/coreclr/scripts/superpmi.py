@@ -2717,12 +2717,8 @@ class SuperPMIReplayAsmDiffs:
             smallest_contexts = sorted(diffs, key=lambda r: int(r["Context size"]))[:20]
             display_subset("Smallest {} contexts with binary differences:", smallest_contexts)
 
-            if self.coreclr_args.metrics is None:
-                base_metric_name = "Base ActualCodeBytes"
-                diff_metric_name = "Diff ActualCodeBytes"
-            else:
-                base_metric_name = "Base PerfScore"
-                diff_metric_name = "Diff PerfScore"
+            base_metric_name = "Base InstructionCount"
+            diff_metric_name = "Diff InstructionCount"
 
             # Order by improvement, largest improvements first
             by_diff = sorted(diffs, key=lambda r: float(r[diff_metric_name]) - float(r[base_metric_name]))
@@ -2758,7 +2754,7 @@ class SuperPMIReplayAsmDiffs:
             # Prefer to show small diffs over large percentage wise diffs; sort by this additionally.
             # sorted is stable, so for multiple small diffs this will keep them in order of percentage wise improvement/regression.
             def is_small_diff(row):
-                if abs(int(row['Diff ActualCodeBytes']) - int(row['Base ActualCodeBytes'])) < 50:
+                if abs(int(row[diff_metric_name]) - int(row[base_metric_name])) < 50:
                     return 0
 
                 return 1
@@ -3073,8 +3069,8 @@ def write_example_diffs_to_markdown_summary(write_fh, asm_diffs):
 
             with DetailsSection(write_fh, collection_name):
                 for (func_name, diff, diff_text) in examples_to_put_in_summary:
-                    base_size = int(diff["Base ActualCodeBytes"])
-                    diff_size = int(diff["Diff ActualCodeBytes"])
+                    base_size = int(diff["Base InstructionCount"])
+                    diff_size = int(diff["Diff InstructionCount"])
                     with DetailsSection(write_fh, "{} ({}) : {}".format(format_delta(base_size, diff_size), compute_and_format_pct(base_size, diff_size), func_name)):
                         write_fh.write(diff_text)
 
