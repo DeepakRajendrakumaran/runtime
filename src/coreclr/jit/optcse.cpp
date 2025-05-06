@@ -4181,7 +4181,12 @@ void CSE_Heuristic::Initialize()
         // (weighted) ref count to aggressiveRefCnt or moderateRefCnt.
         //
         const unsigned aggressiveEnregNum = (CNT_CALLEE_ENREG * 3 / 2);
+#ifdef DEBUG
+        // TODO-XArch-APX: hack to check if CSE regression goes away with the original threshold.
+        const unsigned moderateEnregNum   = ((CNT_CALLEE_ENREG * 3) + (7 * 2));
+#else
         const unsigned moderateEnregNum   = ((CNT_CALLEE_ENREG * 3) + (CNT_CALLEE_TRASH * 2));
+#endif
         //
         // On Windows x64 this yields:
         // aggressiveEnregNum == 12 and moderateEnregNum == 38
@@ -4204,7 +4209,7 @@ void CSE_Heuristic::Initialize()
             }
             aggressiveRefCnt += BB_UNITY_WEIGHT;
         }
-        if ((moderateRefCnt == 0) && (enregCount > ((CNT_CALLEE_ENREG * 3) + (CNT_CALLEE_TRASH * 2))))
+        if ((moderateRefCnt == 0) && (enregCount > moderateEnregNum))
         {
             if (CodeOptKind() == Compiler::SMALL_CODE)
             {
