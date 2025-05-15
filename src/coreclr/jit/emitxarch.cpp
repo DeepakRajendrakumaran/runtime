@@ -3559,10 +3559,10 @@ unsigned emitter::emitGetAdjustedSize(instrDesc* id, code_t code) const
         {
             prefixAdjustedSize = emitGetEvexPrefixSize(id);
             assert(prefixAdjustedSize == 4);
-            if (IsApxOnlyInstruction(ins))
+            /*if (IsApxOnlyInstruction(ins))
             {
                 return prefixAdjustedSize;
-            }
+            }*/
         }
         else
         {
@@ -12454,7 +12454,7 @@ void emitter::emitDispEmbRounding(instrDesc* id) const
 //
 void emitter::emitDispEmbMasking(instrDesc* id) const
 {
-    if (!IsEvexEncodableInstruction(id->idIns()) || IsApxExtendedEvexInstruction(id->idIns()))
+    if (!IsEvexEncodableInstruction(id->idIns()) /*|| IsApxExtendedEvexInstruction(id->idIns())*/)
     {
         return;
     }
