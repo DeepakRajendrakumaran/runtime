@@ -2663,6 +2663,13 @@ void CodeGen::instGen_Set_Reg_To_Zero(emitAttr size, regNumber reg, insFlags fla
     regSet.verifyRegUsed(reg);
 }
 
+#if defined(TARGET_AMD64)
+void CodeGen::instGen_Push2Pop2(instruction ins, regNumber   reg1, regNumber   reg2)
+{
+    GetEmitter()->emitIns_R_R(ins, EA_PTRSIZE, reg1, reg2, INS_OPTS_EVEX_nd);
+}
+#endif // defined(TARGET_AMD64)
+
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/

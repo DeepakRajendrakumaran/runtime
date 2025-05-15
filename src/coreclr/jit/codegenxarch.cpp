@@ -9374,6 +9374,9 @@ void CodeGen::genAmd64EmitterUnitTestsApx()
     theEmitter->emitIns_R_R_R(INS_pext, EA_4BYTE, REG_R16, REG_R18, REG_R17);
     theEmitter->emitIns_R_R_R(INS_pext, EA_8BYTE, REG_R16, REG_R18, REG_R17);
 
+    theEmitter->emitIns_R_R(INS_push2, EA_PTRSIZE, REG_R16, REG_R17, INS_OPTS_EVEX_nd);
+    theEmitter->emitIns_R_R(INS_pop2, EA_PTRSIZE, REG_R16, REG_R17, INS_OPTS_EVEX_nd);
+
     theEmitter->emitIns_Mov(INS_movd, EA_4BYTE, REG_R16, REG_XMM0, false);
     theEmitter->emitIns_Mov(INS_movd, EA_4BYTE, REG_R16, REG_XMM16, false);
     theEmitter->emitIns_Mov(INS_movq, EA_8BYTE, REG_R16, REG_XMM0, false);
@@ -10229,7 +10232,6 @@ void CodeGen::genOSRSaveRemainingCalleeSavedRegisters()
         osrAdditionalIntCalleeSaves &= ~regBit;
     }
 }
-
 #endif // TARGET_AMD64
 
 //------------------------------------------------------------------------
@@ -10279,6 +10281,55 @@ void CodeGen::genPushCalleeSavedRegisters()
     }
 #endif // DEBUG
 
+#ifdef TARGET_AMD64
+// Deepak: look up osr
+    if(compiler->canUseApxEncoding() && JitConfig.EnableApxPPX() && !compiler->opts.IsOSR())
+    {
+        assert((rsPushRegs & RBM_SPBASE) == 0);
+        if(!isFramePointerUsed() && (rsPushRegs != RBM_NONE))
+        {
+            // We need to align the stack to 16 bytes.
+            if ((rsPushRegs & RBM_FPBASE) != 0)
+            {
+                inst_RV(INS_push, REG_EBP, TYP_REF);
+                compiler->unwindPush(REG_EBP);
+                rsPushRegs &= ~RBM_FPBASE;
+            }
+            else
+            {
+                regNumber alignReg = genFirstRegNumFromMaskAndToggle(rsPushRegs);
+                inst_RV(INS_push, alignReg, TYP_REF);
+                compiler->unwindPush(alignReg);
+            }
+        }
+
+        ArrayStack<regNumber> regStack(compiler->getAllocator(CMK_Codegen));
+        while (rsPushRegs != RBM_NONE)
+        {
+            regNumber reg = genFirstRegNumFromMaskAndToggle(rsPushRegs);
+            regStack.Push(reg);
+        }
+        while (regStack.Height() > 1)
+        {
+            regNumber reg1 = regStack.Pop();
+            regNumber reg2 = regStack.Pop();
+
+            instGen_Push2Pop2(INS_push2, reg1, reg2);
+            compiler->unwindPush(reg1);
+            compiler->unwindPush(reg2);
+        }
+
+        if (regStack.Height() == 1)
+        {
+            regNumber reg = regStack.Pop();
+            inst_RV(INS_push, reg, TYP_REF);
+            compiler->unwindPush(reg);
+        }
+        assert(regStack.Height() == 0);
+        return;
+    }
+#endif // TARGET_AMD64
+
     // Push backwards so we match the order we will pop them in the epilog
     // and all the other code that expects it to be in this order.
     for (regNumber reg = get_REG_INT_LAST(); rsPushRegs != RBM_NONE; reg = REG_PREV(reg))
@@ -10327,6 +10378,14 @@ void CodeGen::genPopCalleeSavedRegisters(bool jmpEpilog)
         return;
     }
 
+    if(compiler->canUseApxEncoding() && JitConfig.EnableApxPPX() && !compiler->opts.IsOSR())
+    {
+        regMaskTP      rsPopRegs = regSet.rsGetModifiedIntCalleeSavedRegsMask();
+        const unsigned popCount  = genPopCalleeSavedRegistersFromMaskAPX(rsPopRegs);
+        noway_assert(compiler->compCalleeRegsPushed == popCount);
+        return;
+    }
+
 #endif // TARGET_AMD64
 
     // Registers saved by a normal prolog
@@ -10335,6 +10394,7 @@ void CodeGen::genPopCalleeSavedRegisters(bool jmpEpilog)
     const unsigned popCount  = genPopCalleeSavedRegistersFromMask(rsPopRegs);
     noway_assert(compiler->compCalleeRegsPushed == popCount);
 }
+
 
 //------------------------------------------------------------------------
 // genPopCalleeSavedRegistersFromMask: pop specified set of callee saves
@@ -10401,6 +10461,66 @@ unsigned CodeGen::genPopCalleeSavedRegistersFromMask(regMaskTP rsPopRegs)
 
     return popCount;
 }
+
+#if defined(TARGET_AMD64)
+//------------------------------------------------------------------------
+// genPopCalleeSavedRegistersFromMaskAPX: pop specified set of callee saves
+//   in the "standard" order
+//
+unsigned CodeGen::genPopCalleeSavedRegistersFromMaskAPX(regMaskTP rsPopRegs)
+{
+    unsigned popCount = 0;
+    assert((rsPopRegs & RBM_SPBASE) == 0);
+    regNumber alignReg = REG_NA;
+    // We need to align the stack to 16 bytes to use pop2.
+    if(!isFramePointerUsed() && (rsPopRegs != RBM_NONE))
+    {
+        if ((rsPopRegs & RBM_FPBASE) != 0)
+        {
+            alignReg = REG_EBP;
+            rsPopRegs &= ~RBM_FPBASE;
+        }
+        else
+        {
+            alignReg = genFirstRegNumFromMaskAndToggle(rsPopRegs);
+        }
+    }
+
+    ArrayStack<regNumber> regStack(compiler->getAllocator(CMK_Codegen));
+    while (rsPopRegs != RBM_NONE)
+    {
+        regNumber reg = genFirstRegNumFromMaskAndToggle(rsPopRegs);
+        regStack.Push(reg);
+    }
+
+    int index = 0;
+    if(regStack.Height() % 2 == 1)
+    {
+        // We have an odd number of registers to pop, so we need to pop the last one
+        // separately. This is the case when we have a hole in the register mask.
+        regNumber reg = regStack.Bottom(index++);
+        inst_RV(INS_pop, reg, TYP_I_IMPL);
+        popCount++;
+    }
+
+    while (index < (regStack.Height() - 1))
+    {
+        regNumber reg1 = regStack.Bottom(index++);
+        regNumber reg2 = regStack.Bottom(index++);
+        instGen_Push2Pop2(INS_pop2, reg1, reg2);
+        popCount += 2;
+    }
+    assert(regStack.Height() == index);
+
+    if (alignReg != REG_NA)
+    {
+        inst_RV(INS_pop, alignReg, TYP_I_IMPL);
+        popCount++;
+    }
+
+    return popCount;
+}
+#endif // defined(TARGET_AMD64)
 
 /*****************************************************************************
  *
