@@ -3570,6 +3570,10 @@ unsigned emitter::emitGetAdjustedSize(instrDesc* id, code_t code) const
         {
             prefixAdjustedSize = emitGetEvexPrefixSize(id);
             assert(prefixAdjustedSize == 4);
+            if (IsApxOnlyInstruction(ins))
+            {
+                return prefixAdjustedSize;
+            }
         }
         else
         {
@@ -12461,7 +12465,7 @@ void emitter::emitDispEmbRounding(instrDesc* id) const
 //
 void emitter::emitDispEmbMasking(instrDesc* id) const
 {
-    if (!IsEvexEncodableInstruction(id->idIns()))
+    if (!IsEvexEncodableInstruction(id->idIns()) || IsApxExtendedEvexInstruction(id->idIns()))
     {
         return;
     }
@@ -16747,6 +16751,16 @@ BYTE* emitter::emitOutputRR(BYTE* dst, instrDesc* id)
         }
     }
 #endif // FEATURE_HW_INTRINSICS
+#ifdef TARGET_AMD64
+    else if ((ins == INS_push2) || (ins == INS_pop2))
+    {
+        assert(size == EA_PTRSIZE);
+        assert(TakesApxExtendedEvexPrefix(id));
+        code = insCodeMR(ins);
+        code = AddX86PrefixIfNeeded(id, code, size);
+        code = insEncodeMRreg(id, code);
+}
+#endif // TARGET_AMD64
     else
     {
         // TODO-XArch-APX:
@@ -20251,6 +20265,15 @@ emitter::insExecutionCharacteristics emitter::getInsExecutionCharacteristics(ins
             }
             break;
 
+        case INS_push2:
+            // TODO-XArch-APX: to be verified.
+            result.insThroughput = PERFSCORE_THROUGHPUT_1C;
+            if (insFmt == IF_RRD_RRD) // push2  reg1, reg2
+            {
+                result.insLatency = PERFSCORE_LATENCY_ZERO;
+            }
+            break;
+
         case INS_pop:
         case INS_pop_hide:
             if (insFmt == IF_RWR) // pop   reg
@@ -20262,6 +20285,15 @@ emitter::insExecutionCharacteristics emitter::getInsExecutionCharacteristics(ins
             else
             {
                 result.insThroughput = PERFSCORE_THROUGHPUT_1C;
+            }
+            break;
+
+        case INS_pop2:
+            // TODO-XArch-APX: to be verified.
+            result.insThroughput = PERFSCORE_THROUGHPUT_1C;
+            if (insFmt == IF_RRD_RRD) // pop2  reg1, reg2
+            {
+                result.insLatency = PERFSCORE_LATENCY_ZERO;
             }
             break;
 
