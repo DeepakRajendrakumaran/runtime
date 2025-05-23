@@ -10304,14 +10304,14 @@ void CodeGen::genPushCalleeSavedRegisters()
         {
             if ((rsPushRegs & RBM_FPBASE) != 0)
             {
-                inst_RV(INS_push, REG_EBP, TYP_REF);
+                GetEmitter()->emitIns_R(INS_push, EA_PTRSIZE, REG_EBP, INS_OPTS_APX_ppx);
                 compiler->unwindPush(REG_EBP);
                 rsPushRegs &= ~RBM_FPBASE;
             }
             else
             {
                 regNumber alignReg = genFirstRegNumFromMaskAndToggle(rsPushRegs);
-                inst_RV(INS_push, alignReg, TYP_REF);
+                GetEmitter()->emitIns_R(INS_push, EA_PTRSIZE, alignReg, INS_OPTS_APX_ppx);
                 compiler->unwindPush(alignReg);
             }
         }
@@ -10334,7 +10334,7 @@ void CodeGen::genPushCalleeSavedRegisters()
             regNumber reg1 = regStack.Pop();
             regNumber reg2 = regStack.Pop();
 
-            instGen_Push2Pop2Ppx(INS_push2, reg1, reg2);
+            GetEmitter()->emitIns_R_R(INS_push2, EA_PTRSIZE, reg1, reg2, (insOpts) (INS_OPTS_EVEX_nd | INS_OPTS_APX_ppx));
             compiler->unwindPush(reg1);
             compiler->unwindPush(reg2);
         }
@@ -10342,7 +10342,7 @@ void CodeGen::genPushCalleeSavedRegisters()
         if (regStack.Height() == 1)
         {
             regNumber reg = regStack.Pop();
-            inst_RV(INS_push, reg, TYP_REF);
+            GetEmitter()->emitIns_R(INS_push, EA_PTRSIZE, reg, INS_OPTS_APX_ppx);
             compiler->unwindPush(reg);
         }
         assert(regStack.Height() == 0);
@@ -10532,7 +10532,7 @@ unsigned CodeGen::genPopCalleeSavedRegistersFromMaskAPX(regMaskTP rsPopRegs)
         // We have an odd number of registers to pop, so we need to pop the last one
         // separately..
         regNumber reg = regStack.Bottom(index++);
-        inst_RV(INS_pop, reg, TYP_I_IMPL);
+        GetEmitter()->emitIns_R(INS_push, EA_PTRSIZE, reg, INS_OPTS_APX_ppx);
         popCount++;
     }
 
@@ -10540,14 +10540,14 @@ unsigned CodeGen::genPopCalleeSavedRegistersFromMaskAPX(regMaskTP rsPopRegs)
     {
         regNumber reg1 = regStack.Bottom(index++);
         regNumber reg2 = regStack.Bottom(index++);
-        instGen_Push2Pop2Ppx(INS_pop2, reg1, reg2);
+        GetEmitter()->emitIns_R_R(INS_pop2, EA_PTRSIZE, reg1, reg2, (insOpts) (INS_OPTS_EVEX_nd | INS_OPTS_APX_ppx));
         popCount += 2;
     }
     assert(regStack.Height() == index);
 
     if (alignReg != REG_NA)
     {
-        inst_RV(INS_pop, alignReg, TYP_I_IMPL);
+        GetEmitter()->emitIns_R(INS_push, EA_PTRSIZE, alignReg, INS_OPTS_APX_ppx);
         popCount++;
     }
 
