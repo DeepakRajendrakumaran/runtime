@@ -227,6 +227,9 @@ enum insFlags : uint64_t
     // APX: EVEX.NF:
     INS_Flags_Has_NF  = 1ULL << 46,
 
+    // APX: APX.PPX:
+    INS_Flags_Has_PPX  = 1ULL << 47,
+
     //  TODO-Cleanup:  Remove this flag and its usage from TARGET_XARCH
     INS_FLAGS_DONT_CARE = 0x00ULL,
 };
@@ -285,6 +288,10 @@ enum insOpts: unsigned
     INS_OPTS_EVEX_dfv_MASK = 0xF00,
 
     INS_OPTS_EVEX_NoApxPromotion = 1 << 12,    // Do not promote to APX-EVEX
+
+    INS_OPTS_APX_ppx = 1 << 13,      // PPX hint for APX-EVEX
+    // One-bit:  0b10_0000_0000_0000
+    INS_OPTS_APX_ppx_MASK = 0x2000,   // mask for APX-EVEX.ppx feature.
 
 };
 
