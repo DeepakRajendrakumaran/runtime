@@ -1961,11 +1961,11 @@ class DetailsSection:
 def aggregate_diff_metrics(details_file):
     """ Given the path to a CSV details file output by SPMI for a diff aggregate the metrics.
     """
-
     base_minopts = {"Successful compiles": 0, "Missing compiles": 0, "Failing compiles": 0,
                     "Contexts with diffs": 0, "Diffed code bytes": 0,
                     "Diffed PerfScore" : 0.0, "Relative PerfScore Geomean": 0.0,
-                    "Diff executed instructions": 0, "Diffed contexts": 0}
+                    "Diff executed instructions": 0, "Diffed contexts": 0, "Instruction Count": 0,
+                    "Base with Diff Instruction Count": 0, "Base with Diff Instruction Count Non Zero": 0}
     base_fullopts = base_minopts.copy()
 
     diff_minopts = base_minopts.copy()
@@ -1974,7 +1974,7 @@ def aggregate_diff_metrics(details_file):
     # Project out these fields for the saved diffs, to use for further
     # processing. Saving everything into memory is costly on memory when there
     # are a large number of diffs.
-    diffs_fields = ["Context", "Method full name", "Context size", "Base ActualCodeBytes", "Diff ActualCodeBytes", "Base PerfScore", "Diff PerfScore"]
+    diffs_fields = ["Context", "Method full name", "Context size", "Base ActualCodeBytes", "Diff ActualCodeBytes", "Base PerfScore", "Diff PerfScore", "Base InstructionCount", "Diff InstructionCount"]
     diffs = []
 
     for row in read_csv(details_file):
@@ -2014,6 +2014,8 @@ def aggregate_diff_metrics(details_file):
             diff_insts = int(row["Diff instructions"])
             base_dict["Diff executed instructions"] += base_insts
             diff_dict["Diff executed instructions"] += diff_insts
+            base_dict["Instruction Count"] += int(row["Base InstructionCount"])
+            diff_dict["Instruction Count"] += int(row["Diff InstructionCount"])
 
             base_perfscore = float(row["Base PerfScore"])
             diff_perfscore = float(row["Diff PerfScore"])
@@ -2030,8 +2032,13 @@ def aggregate_diff_metrics(details_file):
             if row["Has diff"] == "True":
                 base_dict["Contexts with diffs"] += 1
                 diff_dict["Contexts with diffs"] += 1
+                base_dict["Base with Diff Instruction Count"] += int(row["Base InstructionCount"])
                 diffs.append({key: row[key] for key in diffs_fields})
+                if int(row["Base InstructionCount"]) != int(row["Diff InstructionCount"]):
+                    base_dict["Base with Diff Instruction Count Non Zero"] += int(row["Base InstructionCount"])
 
+    # print("***********************\n\nFound same icount methods with diff: " + str(base_dict["Base with Diff Instruction Count Non Zero"]) + "\n\n********************************\n")
+    # print("***********************\n\nFound same icount methods with diff: " + str(base_dict["Base with Diff Instruction Count"]) + "\n\n********************************\n")
     base_overall = base_minopts.copy()
     for k in base_overall.keys():
         base_overall[k] += base_fullopts[k]
@@ -2266,6 +2273,8 @@ class SuperPMIReplayAsmDiffs:
                 print_superpmi_error_result(return_code, self.coreclr_args)
 
                 (base_metrics, diff_metrics, diffs) = aggregate_diff_metrics(detailed_info_file)
+                # print("******Saving detailed_info_file\n")
+                # shutil.copy(detailed_info_file, r"C:\Users\kmodi\Documents\temp.csv");
                 print_superpmi_success_result(return_code, base_metrics, diff_metrics)
 
                 artifacts_base_name = create_artifacts_base_name(self.coreclr_args, mch_file)
@@ -2574,6 +2583,8 @@ class SuperPMIReplayAsmDiffs:
             summarizable_asm_diffs = self.create_summarizable_asm_diffs(asm_diffs)
             (base_jit_options, diff_jit_options) = get_base_diff_jit_options(self.coreclr_args)
 
+            write_asmdiffs_csv_summary(self.coreclr_args.details, summarizable_asm_diffs)
+
             if self.coreclr_args.summary_as_json:
                 overall_json_summary_file = create_unique_file_name(self.coreclr_args.spmi_location, "diff_summary", "json")
                 if os.path.isfile(overall_json_summary_file):
@@ -2707,12 +2718,8 @@ class SuperPMIReplayAsmDiffs:
             smallest_contexts = sorted(diffs, key=lambda r: int(r["Context size"]))[:20]
             display_subset("Smallest {} contexts with binary differences:", smallest_contexts)
 
-            if self.coreclr_args.metrics is None:
-                base_metric_name = "Base ActualCodeBytes"
-                diff_metric_name = "Diff ActualCodeBytes"
-            else:
-                base_metric_name = "Base PerfScore"
-                diff_metric_name = "Diff PerfScore"
+            base_metric_name = "Base InstructionCount"
+            diff_metric_name = "Diff InstructionCount"
 
             # Order by improvement, largest improvements first
             by_diff = sorted(diffs, key=lambda r: float(r[diff_metric_name]) - float(r[base_metric_name]))
@@ -2748,7 +2755,7 @@ class SuperPMIReplayAsmDiffs:
             # Prefer to show small diffs over large percentage wise diffs; sort by this additionally.
             # sorted is stable, so for multiple small diffs this will keep them in order of percentage wise improvement/regression.
             def is_small_diff(row):
-                if abs(int(row['Diff ActualCodeBytes']) - int(row['Base ActualCodeBytes'])) < 50:
+                if abs(int(row[diff_metric_name]) - int(row[base_metric_name])) < 50:
                     return 0
 
                 return 1
@@ -2785,6 +2792,53 @@ class SuperPMIReplayAsmDiffs:
         final_contexts_indices = list(set(int(r["Context"]) for r in contexts))
         final_contexts_indices.sort()
         return (final_contexts_indices, examples)
+
+def write_asmdiffs_csv_summary(csv_file_path, asm_diffs):
+    """ Write a CSV summary file of the diffs that were found.
+
+    Args:
+        csv_file_path : path to the CSV file to output to
+        asm_diffs     : list of tuples: (mch_name, base_metrics, diff_metrics, diffs_info, jit_analyze_summary, examples_to_put_in_summary)
+    """
+    import csv
+
+    with open(csv_file_path, mode='w', newline='', encoding='utf-8') as csv_file:
+        writer = csv.writer(csv_file)
+
+        # Write the header row
+        writer.writerow([
+            "Collection",
+            "Base size (bytes)",
+            "Diff size (bytes)",
+            "PerfScore in Diffs",
+            "Base Instruction Count",
+            "Diff Instruction Count",
+            "Instruction Count Difference",
+            "% Instruction Count Difference",
+            "% Instruction Count Difference (Ignoring Zero diffs)"
+        ])
+
+        # Write the data rows
+        for (mch_file, base_metrics, diff_metrics, _, _, _) in asm_diffs:
+            if base_metrics and diff_metrics:
+                writer.writerow([
+                    mch_file,
+                    base_metrics["Overall"]["Diffed code bytes"],
+                    diff_metrics["Overall"]["Diffed code bytes"],
+                    # format_pct(diff_metrics["Overall"]["Relative PerfScore Geomean (Diffs)"] * 100 - 100),
+                    (diff_metrics["Overall"]["Relative PerfScore Geomean (Diffs)"] * 100 - 100),
+                    base_metrics["Overall"]["Instruction Count"],
+                    diff_metrics["Overall"]["Instruction Count"],
+                     diff_metrics["Overall"]["Instruction Count"] - base_metrics["Overall"]["Instruction Count"],
+                    (
+                        ((diff_metrics["Overall"]["Instruction Count"] - base_metrics["Overall"]["Instruction Count"]) * 100) /
+                        base_metrics["Overall"]["Base with Diff Instruction Count"]
+                    ),
+                    (
+                        ((diff_metrics["Overall"]["Instruction Count"] - base_metrics["Overall"]["Instruction Count"]) * 100) /
+                        base_metrics["Overall"]["Base with Diff Instruction Count Non Zero"]
+                    )
+                ])
 
 def write_asmdiffs_markdown_summary(write_fh, base_jit_options, diff_jit_options, asm_diffs, include_details):
     """ Write a markdown summary file of the diffs that were found.
@@ -2848,20 +2902,26 @@ def write_asmdiffs_markdown_summary(write_fh, base_jit_options, diff_jit_options
             sum_diff = sum(diff_metrics[row]["Diffed code bytes"] for (_, _, diff_metrics, _, _, _) in asm_diffs)
 
             with DetailsSection(write_fh, "{} ({} bytes)".format(row, format_delta(sum_base, sum_diff))):
-                write_fh.write("|Collection|Base size (bytes)|Diff size (bytes)|PerfScore in Diffs\n")
-                write_fh.write("|---|--:|--:|--:|\n")
+                write_fh.write("|Collection|Base size (bytes)|Diff size (bytes)|PerfScore in Diffs|Base Instruction Count|Diff Instruction Count\n")
+                write_fh.write("|---|--:|--:|--:|--:|--:|\n")
                 for (mch_file, base_metrics, diff_metrics, _, _, _) in asm_diffs:
                     # Exclude this particular row?
                     if not has_diffs(diff_metrics[row]):
                         continue
 
-                    write_fh.write("|{}|{:,d}|{}|{}|\n".format(
+                    write_fh.write("|{}|{:,d}|{}|{}|{}|{}({})({})|\n".format(
                         mch_file,
                         base_metrics[row]["Diffed code bytes"],
                         format_delta(
                             base_metrics[row]["Diffed code bytes"],
                             diff_metrics[row]["Diffed code bytes"]),
-                        format_pct(diff_metrics[row]["Relative PerfScore Geomean (Diffs)"] * 100 - 100)))
+                        format_pct(diff_metrics[row]["Relative PerfScore Geomean (Diffs)"] * 100 - 100),
+                        base_metrics[row]["Instruction Count"],
+                        format_delta(
+                            base_metrics[row]["Instruction Count"],
+                            diff_metrics[row]["Instruction Count"]),
+                        format_pct((diff_metrics[row]["Instruction Count"] - base_metrics[row]["Instruction Count"])*100 / base_metrics[row]["Base with Diff Instruction Count"]),
+                        format_pct((diff_metrics[row]["Instruction Count"] - base_metrics[row]["Instruction Count"])*100 / base_metrics[row]["Base with Diff Instruction Count Non Zero"])))
 
         write_top_context_section()
         write_pivot_section("Overall")
@@ -2879,6 +2939,29 @@ def write_asmdiffs_markdown_summary(write_fh, base_jit_options, diff_jit_options
         # Next write a detailed section
         with DetailsSection(write_fh, "Details"):
             if any_diffs:
+                write_fh.write("#### Instruction Count improvements/regressions per collection\n\n")
+                write_fh.write("|Collection|Contexts with diffs|Improvements|Regressions|Same size|Improvements (#instructions)|Regressions (#instructions)|\n")
+                write_fh.write("|---|--:|--:|--:|--:|--:|--:|\n")
+                
+                def write_row(name, diffs):
+                    base_diff_sizes = [(int(r["Base InstructionCount"]), int(r["Diff InstructionCount"])) for r in diffs]
+                    (num_improvements, num_regressions, num_same, byte_improvements, byte_regressions) = calculate_size_improvements_regressions(base_diff_sizes)
+                    write_fh.write("|{}|{:,d}|{}|{}|{}|{}|{}|\n".format(
+                        name,
+                        len(diffs),
+                        html_color("green", "{:,d}".format(num_improvements)),
+                        html_color("red", "{:,d}".format(num_regressions)),
+                        html_color("blue", "{:,d}".format(num_same)),
+                        html_color("green", "-{:,d}".format(byte_improvements)),
+                        html_color("red", "+{:,d}".format(byte_regressions))))
+
+                for (mch_file, _, diff_metrics, diffs, _, _) in asm_diffs:
+                    write_row(mch_file, diffs)
+
+                if len(asm_diffs) > 1:
+                    write_row("", [r for (_, _, _, diffs, _, _) in asm_diffs for r in diffs])
+
+                write_fh.write("\n---\n\n")
                 write_fh.write("#### Size improvements/regressions per collection\n\n")
                 write_fh.write("|Collection|Contexts with diffs|Improvements|Regressions|Same size|Improvements (bytes)|Regressions (bytes)|\n")
                 write_fh.write("|---|--:|--:|--:|--:|--:|--:|\n")
@@ -2987,8 +3070,8 @@ def write_example_diffs_to_markdown_summary(write_fh, asm_diffs):
 
             with DetailsSection(write_fh, collection_name):
                 for (func_name, diff, diff_text) in examples_to_put_in_summary:
-                    base_size = int(diff["Base ActualCodeBytes"])
-                    diff_size = int(diff["Diff ActualCodeBytes"])
+                    base_size = int(diff["Base InstructionCount"])
+                    diff_size = int(diff["Diff InstructionCount"])
                     with DetailsSection(write_fh, "{} ({}) : {}".format(format_delta(base_size, diff_size), compute_and_format_pct(base_size, diff_size), func_name)):
                         write_fh.write(diff_text)
 
