@@ -2814,8 +2814,8 @@ def write_asmdiffs_csv_summary(csv_file_path, asm_diffs):
             "Base Instruction Count",
             "Diff Instruction Count",
             "Instruction Count Difference",
-            "% Instruction Count Difference",
-            "% Instruction Count Difference (Ignoring Zero diffs)"
+            #"% Instruction Count Difference",
+            #"% Instruction Count Difference (Ignoring Zero diffs)"
         ])
 
         # Write the data rows
@@ -2830,14 +2830,14 @@ def write_asmdiffs_csv_summary(csv_file_path, asm_diffs):
                     base_metrics["Overall"]["Instruction Count"],
                     diff_metrics["Overall"]["Instruction Count"],
                      diff_metrics["Overall"]["Instruction Count"] - base_metrics["Overall"]["Instruction Count"],
-                    (
-                        ((diff_metrics["Overall"]["Instruction Count"] - base_metrics["Overall"]["Instruction Count"]) * 100) /
-                        base_metrics["Overall"]["Base with Diff Instruction Count"]
-                    ),
-                    (
-                        ((diff_metrics["Overall"]["Instruction Count"] - base_metrics["Overall"]["Instruction Count"]) * 100) /
-                        base_metrics["Overall"]["Base with Diff Instruction Count Non Zero"]
-                    )
+                    #(
+                    #    ((diff_metrics["Overall"]["Instruction Count"] - base_metrics["Overall"]["Instruction Count"]) * 100) /
+                    #    base_metrics["Overall"]["Base with Diff Instruction Count"]
+                    #),
+                    #(
+                    #    ((diff_metrics["Overall"]["Instruction Count"] - base_metrics["Overall"]["Instruction Count"]) * 100) /
+                    #    base_metrics["Overall"]["Base with Diff Instruction Count Non Zero"]
+                    #)
                 ])
 
 def write_asmdiffs_markdown_summary(write_fh, base_jit_options, diff_jit_options, asm_diffs, include_details):
