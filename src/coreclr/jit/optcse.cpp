@@ -1752,7 +1752,18 @@ CSE_HeuristicCommon::CSE_HeuristicCommon(Compiler* pCompiler)
     codeOptKind    = m_pCompiler->compCodeOpt();
     enableConstCSE = Compiler::optConstantCSEEnabled();
 #if defined(TARGET_AMD64)
+#ifdef DEBUG
+    if (JitConfig.JitCseRegNum() == 0)
+    {
+        cntCalleeTrashInt = pCompiler->get_CNT_CALLEE_TRASH_INT();
+    }
+    else
+    {
+        cntCalleeTrashInt = JitConfig.JitCseRegNum();
+    }
+#else
     cntCalleeTrashInt = pCompiler->get_CNT_CALLEE_TRASH_INT();
+#endif // DEBUG
     cntCalleeTrashFlt = pCompiler->get_CNT_CALLEE_TRASH_FLOAT();
     cntCalleeTrashMsk = pCompiler->get_CNT_CALLEE_TRASH_MASK();
 #endif // TARGET_AMD64
