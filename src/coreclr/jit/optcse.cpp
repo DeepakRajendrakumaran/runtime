@@ -4572,12 +4572,7 @@ bool CSE_Heuristic::PromotionCheck(CSE_Candidate* candidate)
             cse_use_cost = 1;
         }
         else if (cseRefCnt >= moderateRefCnt)
-        //else if ((cseRefCnt >= moderateRefCnt) && !candidate->LiveAcrossCall())
         {
-            if (candidate->LiveAcrossCall())
-            {
-                return false; // don't promote CSEs that are live across a call
-            }
             // Record that we are choosing to use the moderate promotion rules
             //
             candidate->SetModerate();
