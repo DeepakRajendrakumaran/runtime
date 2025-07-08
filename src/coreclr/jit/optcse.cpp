@@ -57,16 +57,13 @@ const size_t Compiler::s_optCSEhashBucketSize   = 4;
 // based upon the number of callee saved and callee scratch registers.
 //
 #define CNT_AGGRESSIVE_ENREG ((CNT_CALLEE_ENREG * 3) / 2)
-#define CNT_MODERATE_ENREG_CALLEE_ENREG   (CNT_CALLEE_ENREG * 3)
-#define CNT_MODERATE_ENREG_CALLEE_TRASH   (CNT_CALLEE_TRASH * 2)
+#define CNT_MODERATE_ENREG   ((CNT_CALLEE_ENREG * 3) + (CNT_CALLEE_TRASH * 2))
 
 #define CNT_AGGRESSIVE_ENREG_FLT ((CNT_CALLEE_ENREG_FLOAT * 3) / 2)
-#define CNT_MODERATE_ENREG_FLT_CALLEE_ENREG   (CNT_CALLEE_ENREG_FLOAT * 3)
-#define CNT_MODERATE_ENREG_FLT_CALLEE_TRASH   (CNT_CALLEE_TRASH_FLOAT * 2)
+#define CNT_MODERATE_ENREG_FLT   ((CNT_CALLEE_ENREG_FLOAT * 3) + (CNT_CALLEE_TRASH_FLOAT * 2))
 
 #define CNT_AGGRESSIVE_ENREG_MSK ((CNT_CALLEE_ENREG_MASK * 3) / 2)
-#define CNT_MODERATE_ENREG_MSK_CALLEE_ENREG   (CNT_CALLEE_ENREG_MASK * 3)
-#define CNT_MODERATE_ENREG_MSK_CALLEE_TRASH   (CNT_CALLEE_TRASH_MASK * 2)
+#define CNT_MODERATE_ENREG_MSK   ((CNT_CALLEE_ENREG_MASK * 3) + (CNT_CALLEE_TRASH_MASK * 2))
 
 /*****************************************************************************
  *
@@ -4002,12 +3999,9 @@ void CSE_Heuristic::Initialize()
     // Record the weighted ref count of the last "for sure" callee saved LclVar
 
     unsigned   frameSize           = 0;
-    unsigned   regAvailEstimateIntCalleeEnreg = CNT_MODERATE_ENREG_CALLEE_ENREG + 1;
-    unsigned   regAvailEstimateIntCalleeTrashed = CNT_MODERATE_ENREG_CALLEE_TRASH + 1;
-    unsigned   regAvailEstimateFltCalleeEnreg = CNT_MODERATE_ENREG_FLT_CALLEE_ENREG + 1;
-    unsigned   regAvailEstimateFltCalleeTrashed = CNT_MODERATE_ENREG_FLT_CALLEE_TRASH + 1;
-    unsigned   regAvailEstimateMskCalleeEnreg = CNT_MODERATE_ENREG_MSK_CALLEE_ENREG + 1;
-    unsigned   regAvailEstimateMskCalleeTrashed = CNT_MODERATE_ENREG_MSK_CALLEE_TRASH + 1;
+    unsigned   regAvailEstimateInt = CNT_MODERATE_ENREG + 1;
+    unsigned   regAvailEstimateFlt = CNT_MODERATE_ENREG_FLT + 1;
+    unsigned   regAvailEstimateMsk = CNT_MODERATE_ENREG_MSK + 1;
     unsigned   lclNum;
     LclVarDsc* varDsc;
 
@@ -4179,8 +4173,7 @@ void CSE_Heuristic::Initialize()
 
         unsigned enregCount;
         unsigned cntAggressiveEnreg;
-        unsigned cntModerateEnregCalleeSaved;
-        unsigned cntModerateEnregCalleeTrashed;
+        unsigned cntModerateEnreg;
 
         if (varTypeUsesIntReg(varTyp))
         {
@@ -4195,8 +4188,7 @@ void CSE_Heuristic::Initialize()
 
             enregCount         = enregCountInt;
             cntAggressiveEnreg = CNT_AGGRESSIVE_ENREG;
-            cntModerateEnregCalleeSaved   = CNT_MODERATE_ENREG_CALLEE_ENREG;
-            cntModerateEnregCalleeTrashed   = CNT_MODERATE_ENREG_CALLEE_TRASH;
+            cntModerateEnreg   = CNT_MODERATE_ENREG;
         }
         else if (varTypeUsesMaskReg(varTyp))
         {
@@ -4204,8 +4196,7 @@ void CSE_Heuristic::Initialize()
 
             enregCount         = enregCountMsk;
             cntAggressiveEnreg = CNT_AGGRESSIVE_ENREG_MSK;
-            cntModerateEnregCalleeSaved   = CNT_MODERATE_ENREG_MSK_CALLEE_ENREG;
-            cntModerateEnregCalleeTrashed   = CNT_MODERATE_ENREG_MSK_CALLEE_TRASH;
+            cntModerateEnreg   = CNT_MODERATE_ENREG_MSK;
         }
         else
         {
@@ -4214,8 +4205,7 @@ void CSE_Heuristic::Initialize()
 
             enregCount         = enregCountFlt;
             cntAggressiveEnreg = CNT_AGGRESSIVE_ENREG_FLT;
-            cntModerateEnregCalleeSaved   = CNT_MODERATE_ENREG_FLT_CALLEE_ENREG;
-            cntModerateEnregCalleeTrashed   = CNT_MODERATE_ENREG_FLT_CALLEE_TRASH;
+            cntModerateEnreg   = CNT_MODERATE_ENREG_FLT;
         }
 
         if ((aggressiveRefCnt == 0) && (enregCount > cntAggressiveEnreg))
