@@ -9082,7 +9082,13 @@ void emitter::emitUpdateLiveGCregs(GCtype gcType, regMaskTP regs, BYTE* addr)
     {
         return;
     }
-
+#ifdef TARGET_AMD64
+    if ((regs & RBM_HIGHINT) != 0) {
+        // We don't support GC refs in the high 8 registers on AMD64.
+        // This is because we don't have a way to track them in the GC info.
+        assert(!" emitUpdateLiveGCregs GC ref in high 16 registers not supported");
+    }   
+#endif // TARGET_AMD64
     regMaskTP life;
     regMaskTP dead;
     regMaskTP chg;
@@ -9149,6 +9155,13 @@ void emitter::emitGCregLiveSet(GCtype gcType, regMaskTP regMask, BYTE* addr, boo
     assert(emitIssuing);
     assert(needsGC(gcType));
 
+#ifdef TARGET_AMD64
+    if ((regMask & RBM_HIGHINT) != 0) {
+        // We don't support GC refs in the high 8 registers on AMD64.
+        // This is because we don't have a way to track them in the GC info.
+        assert(!" emitGCregLiveSet GC ref in high 16 registers not supported");
+    }   
+#endif // TARGET_AMD64
     regPtrDsc* regPtrNext;
 
     assert(!isThis || emitComp->lvaKeepAliveAndReportThis());
@@ -9181,6 +9194,13 @@ void emitter::emitGCregDeadSet(GCtype gcType, regMaskTP regMask, BYTE* addr)
     assert(needsGC(gcType));
 
     regPtrDsc* regPtrNext;
+#ifdef TARGET_AMD64
+    if ((regMask & RBM_HIGHINT) != 0) {
+        // We don't support GC refs in the high 8 registers on AMD64.
+        // This is because we don't have a way to track them in the GC info.
+        assert(!" emitGCregDeadSet GC ref in high 16 registers not supported");
+    }   
+#endif // TARGET_AMD64
 
     // assert(emitFullyInt);
     assert(emitFullGCinfo);

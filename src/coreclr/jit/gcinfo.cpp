@@ -159,6 +159,22 @@ void GCInfo::gcMarkRegSetGCref(regMaskTP regMask DEBUGARG(bool forceOutput))
 
     gcRegByrefSetCur = gcRegByrefSetNew;
     gcRegGCrefSetCur = gcRegGCrefSetNew;
+#ifdef TARGET_AMD64
+    if ((gcRegByrefSetCur & RBM_HIGHINT) != 0)
+    {
+        printf("\n Deepak gcMarkRegSetGCref Byref in high 16 registers not supported \n");
+        // We don't support Byrefs in the high 16 registers on AMD64.
+        // This is because we don't have a way to track them in the GC info.
+        //assert(!" gcMarkRegSetGCref Byref in high 16 registers not supported");     
+    }
+    if ((gcRegGCrefSetCur & RBM_HIGHINT) != 0)
+    {
+        printf("\n Deepak gcMarkRegSetGCref GC ref in high 16 registers not supported \n");
+        // We don't support GC refs in the high 16 registers on AMD64.
+        // This is because we don't have a way to track them in the GC info.
+        //assert(!" gcMarkRegSetGCref GC ref in high 16 registers not supported");
+    }
+#endif // TARGET_AMD64
 }
 
 /*****************************************************************************
@@ -177,6 +193,23 @@ void GCInfo::gcMarkRegSetByref(regMaskTP regMask DEBUGARG(bool forceOutput))
 
     gcRegByrefSetCur = gcRegByrefSetNew;
     gcRegGCrefSetCur = gcRegGCrefSetNew;
+#ifdef TARGET_AMD64
+    if ((gcRegByrefSetCur & RBM_HIGHINT) != 0)
+    {
+        printf("\n Deepak gcMarkRegSetByref Byref in high 16 registers not supported \n");
+        // We don't support Byrefs in the high 16 registers on AMD64.
+        // This is because we don't have a way to track them in the GC info.
+        //assert(!" gcMarkRegSetByref Byref in high 16 registers not supported");     
+    }
+    if ((gcRegGCrefSetCur & RBM_HIGHINT) != 0)
+    {
+        printf("\n Deepak gcMarkRegSetByref GC ref in high 16 registers not supported \n");
+        // We don't support GC refs in the high 16 registers on AMD64.
+        // This is because we don't have a way to track them in the GC info.
+        //assert(!" gcMarkRegSetByref GC ref in high 16 registers not supported");
+    }
+
+#endif // TARGET_AMD64
 }
 
 /*****************************************************************************
@@ -197,6 +230,23 @@ void GCInfo::gcMarkRegSetNpt(regMaskTP regMask DEBUGARG(bool forceOutput))
 
     gcRegByrefSetCur = gcRegByrefSetNew;
     gcRegGCrefSetCur = gcRegGCrefSetNew;
+#ifdef TARGET_AMD64
+    if ((gcRegByrefSetCur & RBM_HIGHINT) != 0)
+    {
+        printf("\n Deepak gcMarkRegSetNpt Byref in high 16 registers not supported \n");
+        // We don't support Byrefs in the high 16 registers on AMD64.
+        // This is because we don't have a way to track them in the GC info.
+        //assert(!" gcMarkRegSetNpt Byref in high 16 registers not supported");     
+    }
+    if ((gcRegGCrefSetCur & RBM_HIGHINT) != 0)
+    {
+        printf("\n Deepak gcMarkRegSetNpt GC ref in high 16 registers not supported \n");
+        // We don't support GC refs in the high 16 registers on AMD64.
+        // This is because we don't have a way to track them in the GC info.
+        //assert(!" gcMarkRegSetNpt GC ref in high 16 registers not supported");
+    }
+#endif // TARGET_AMD64
+    
 }
 
 /*****************************************************************************
