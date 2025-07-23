@@ -1143,6 +1143,7 @@ private:
     }
 
     RegRecord* getRegisterRecord(regNumber regNum);
+    SingleTypeRegSet getAvailableGPRsForType(SingleTypeRegSet candidates, var_types regType);
 
     RefPosition* newRefPositionRaw(LsraLocation nodeLocation, GenTree* treeNode, RefType refType);
 

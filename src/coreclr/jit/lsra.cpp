@@ -498,6 +498,18 @@ RegRecord* LinearScan::getRegisterRecord(regNumber regNum)
     return &physRegs[regNum];
 }
 
+SingleTypeRegSet LinearScan::getAvailableGPRsForType(SingleTypeRegSet candidates, var_types regType)
+{
+#ifdef TARGET_AMD64
+    if (varTypeIsGC(regType) && ((candidates & RBM_LOWINT.getLow()) != 0))
+    {
+        // For AMD64, we don't use eGPR for GC types.
+        candidates &= (SingleTypeRegSet)RBM_LOWINT.getLow();
+    }
+#endif // TARGET_AMD64
+    return candidates;
+}
+
 #ifdef DEBUG
 
 //----------------------------------------------------------------------------
@@ -8694,6 +8706,7 @@ regNumber LinearScan::getTempRegForResolution(BasicBlock*      fromBlock,
     }
 #else  // !TARGET_ARM
     SingleTypeRegSet freeRegs = allRegs(type);
+    freeRegs = getAvailableGPRsForType(freeRegs, type);
 #endif // !TARGET_ARM
 
 #ifdef DEBUG
@@ -13466,7 +13479,7 @@ SingleTypeRegSet LinearScan::RegisterSelection::select(Interval*                
     {
         preferences = candidates;
     }
-
+    candidates = linearScan->getAvailableGPRsForType(candidates, regType);
 #ifdef DEBUG
     candidates = linearScan->stressLimitRegs(refPosition, regType, candidates);
 #endif
@@ -13934,7 +13947,7 @@ SingleTypeRegSet LinearScan::RegisterSelection::selectMinimal(
             }
         }
     }
-
+    candidates = linearScan->getAvailableGPRsForType(candidates, regType);
 #ifdef DEBUG
     candidates = linearScan->stressLimitRegs(refPosition, regType, candidates);
 #endif
