@@ -2835,22 +2835,6 @@ void LinearScan::buildInitialParamDef(const LclVarDsc* varDsc, regNumber paramRe
     Interval*        interval = getIntervalForLocalVar(varDsc->lvVarIndex);
     const var_types  regType  = varDsc->GetRegisterType();
     SingleTypeRegSet mask     = allRegs(regType);
-#ifdef TARGET_AMD64
-    if (varTypeIsGC(regType))
-    {
-#ifdef DEBUG
-        if (VERBOSE)
-        {
-            printf("\n\n buildInitialParamDef : \n");
-
-            //compiler->gtDispTree(tree, nullptr, nullptr, true);
-            printf("(GC type)\n\n");
-        }
-#endif // DEBUG
-        assert((mask & lowGprRegs) != RBM_NONE);
-        mask &= lowGprRegs;
-    }
-#endif // TARGET_AMD64
     if ((paramReg != REG_NA) && !stressInitialParamReg())
     {
         // Set this interval as currently assigned to that register
@@ -3095,30 +3079,6 @@ RefPosition* LinearScan::BuildDef(GenTree* tree, SingleTypeRegSet dstCandidates,
         interval->hasInterferingUses = true;
         // pendingDelayFree = false;
     }
-#ifdef TARGET_AMD64
-    if (varTypeIsGC(tree->TypeGet()))
-    {
-#ifdef DEBUG
-        if (VERBOSE)
-        {
-            printf("\n\n BuildDef: tree : \n");
-
-            compiler->gtDispTree(tree, nullptr, nullptr, true);
-            printf("(GC type)\n\n");
-        }
-#endif // DEBUG
-        if (dstCandidates == RBM_NONE)
-        {
-            dstCandidates = lowGprRegs;
-        }
-        else
-        {
-            // If we have a candidate register, it must be a low GPR.
-            assert((dstCandidates & lowGprRegs) != RBM_NONE);
-            dstCandidates &= lowGprRegs;
-        }
-    }
-#endif // TARGET_AMD64
     RefPosition* defRefPosition =
         newRefPosition(interval, currentLoc + 1, RefTypeDef, tree, dstCandidates, multiRegIdx);
     if (tree->IsUnusedValue())
@@ -4056,26 +4016,9 @@ void LinearScan::BuildStoreLocDef(GenTreeLclVarCommon* storeLoc,
     {
         defCandidates = allRegs(type);
     }
-#elif TARGET_AMD64
-    defCandidates = allRegs(type);
-    //if (varTypeIsGC(type))
-    if (varTypeUsesIntReg(type))
-    {
-#ifdef DEBUG
-        if (VERBOSE)
-        {
-            printf("\n\n BuildStoreLocDef : \n");
-
-            //compiler->gtDispTree(tree, nullptr, nullptr, true);
-            printf("(GC type)\n\n");
-        }
-#endif // DEBUG
-        assert((defCandidates & lowGprRegs) != RBM_NONE);
-        defCandidates &= lowGprRegs;
-    }
 #else
     defCandidates = allRegs(type);
-#endif
+#endif // TARGET_X86
 
     RefPosition* def = newRefPosition(varDefInterval, currentLoc + 1, RefTypeDef, storeLoc, defCandidates, index);
     if (varDefInterval->isWriteThru)

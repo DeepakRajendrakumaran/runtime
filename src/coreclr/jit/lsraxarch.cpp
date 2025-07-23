@@ -299,33 +299,10 @@ int LinearScan::BuildNode(GenTree* tree)
         case GT_AND:
         case GT_OR:
         case GT_XOR:
-        {
             srcCount = BuildBinaryUses(tree->AsOp());
             assert(dstCount == 1);
-#ifdef TARGET_AMD64
-            GenTree* op1 = tree->AsOp()->gtGetOp1();
-            GenTree* op2 = tree->AsOp()->gtGetOp2IfPresent();
-            if ((op1 != nullptr) && (varTypeIsGC(op1->TypeGet()))
-                || (op2 != nullptr) && (varTypeIsGC(op2->TypeGet())))
-            {
-                // If either operand is a GC type, we need to use a low GPR.
-#ifdef DEBUG
-                if (VERBOSE)
-                {
-                    printf("\n\n BuildBinary: tree : \n");
-
-                    compiler->gtDispTree(tree, nullptr, nullptr, true);
-                    printf("(GC type)\n\n");
-                }
-#endif // DEBUG
-                // For GC types, we always use a low GPR.
-                BuildDef(tree, lowGprRegs);
-                break;
-            }
-#endif // TARGET_AMD64
             BuildDef(tree);
             break;
-        }
 
         case GT_RETURNTRAP:
         {
@@ -3132,11 +3109,7 @@ int LinearScan::BuildIndir(GenTreeIndir* indirTree)
 #endif // FEATURE_SIMD
 
 #ifdef TARGET_AMD64
-    if (/*indirTree->OperIs(GT_STOREIND) && */varTypeIsGC(indirTree->Addr()->TypeGet()))
-    {
-        useCandidates = lowGprRegs; // StoreIndir with GC type address must use low GPRs
-    }
-    else if (varTypeUsesIntReg(indirTree->Addr()))
+    if (varTypeUsesIntReg(indirTree->Addr()))
     {
         useCandidates = ForceLowGprForApxIfNeeded(indirTree->Addr(), useCandidates, getEvexIsSupported());
     }
