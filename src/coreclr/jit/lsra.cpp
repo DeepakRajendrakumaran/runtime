@@ -8706,7 +8706,7 @@ regNumber LinearScan::getTempRegForResolution(BasicBlock*      fromBlock,
     }
 #else  // !TARGET_ARM
     SingleTypeRegSet freeRegs = allRegs(type);
-    freeRegs = getAvailableGPRsForType(freeRegs, type);
+    freeRegs = getAvailableGPRsForType(freeRegs, (type == TYP_INT) ? TYP_REF : type);
 #endif // !TARGET_ARM
 
 #ifdef DEBUG
