@@ -501,7 +501,7 @@ RegRecord* LinearScan::getRegisterRecord(regNumber regNum)
 SingleTypeRegSet LinearScan::getAvailableGPRsForType(SingleTypeRegSet candidates, var_types regType)
 {
 #ifdef TARGET_AMD64
-    if ((varTypeIsGC(regType) || varTypeIsLong(regType)) && ((candidates & RBM_LOWINT.getLow()) != 0))
+    if ((varTypeIsGC(regType) /*|| varTypeIsLong(regType)*/) && ((candidates & RBM_LOWINT.getLow()) != 0))
     {
         // For AMD64, we don't use eGPR for GC types.
         candidates &= (SingleTypeRegSet)RBM_LOWINT.getLow();
