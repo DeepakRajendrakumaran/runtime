@@ -926,9 +926,22 @@ PhaseStatus Rationalizer::DoPhase()
         Statement* firstStatement = block->firstStmt();
         if (firstStatement == nullptr)
         {
+
+            if (block->bbCodeOffs != BAD_IL_OFFSET)
+            {
+                // If we didn't insert a debug info node, we need to insert a dummy one
+                // to ensure that the first node in the block is a debug info node.
+                InlineContext *inlineContext = comp->compInlineContext;
+                ILLocation ilLocation(block->bbCodeOffs, false, false);
+                GenTreeILOffset* ilOffset = new (comp, GT_IL_OFFSET) GenTreeILOffset(DebugInfo(inlineContext, ilLocation) DEBUGARG(0));
+                BlockRange().InsertAtEnd(ilOffset);
+            }
+
             // No statements in this block; skip it.
             continue;
         }
+
+        bool didInsertDebug = false;
 
         for (Statement* const statement : block->Statements())
         {
@@ -950,16 +963,27 @@ PhaseStatus Rationalizer::DoPhase()
                 // NEWOBJ IL instructions where the debug info ends up attached
                 // to the allocation instead of the constructor call.
                 DebugInfo di = statement->GetDebugInfo();
-                if (di.IsValid() || di.GetRoot().IsValid())
+                if (!didInsertDebug && (di.IsValid() || di.GetRoot().IsValid()))
                 {
                     GenTreeILOffset* ilOffset =
                         new (comp, GT_IL_OFFSET) GenTreeILOffset(di DEBUGARG(statement->GetLastILOffset()));
                     BlockRange().InsertBefore(statement->GetTreeList(), ilOffset);
+                    didInsertDebug = true;
                 }
 
                 m_block = block;
                 visitor.WalkTree(statement->GetRootNodePointer(), nullptr);
             }
+        }
+
+        if (!didInsertDebug && block->bbCodeOffs != BAD_IL_OFFSET)
+        {
+            // If we didn't insert a debug info node, we need to insert a dummy one
+            // to ensure that the first node in the block is a debug info node.
+            InlineContext *inlineContext = comp->compInlineContext;
+            ILLocation ilLocation(block->bbCodeOffs, false, false);
+            GenTreeILOffset* ilOffset = new (comp, GT_IL_OFFSET) GenTreeILOffset(DebugInfo(inlineContext, ilLocation) DEBUGARG(0));
+            BlockRange().InsertBefore(block->GetFirstLIRNode(),  ilOffset);
         }
 
         block->bbStmtList = nullptr;

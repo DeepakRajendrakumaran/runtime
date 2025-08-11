@@ -397,6 +397,69 @@ public:
     }
 };
 
+class LBRSchemaGenerator : public Instrumentor
+{
+private:
+    void        RelocateProbes();
+    BasicBlock* m_entryBlock;
+
+public:
+    LBRSchemaGenerator(Compiler* comp)
+        : Instrumentor(comp)
+        , m_entryBlock(nullptr)
+    {
+    }
+    bool ShouldProcess(BasicBlock* block) override
+    {
+        return block->HasFlag(BBF_IMPORTED) && !block->HasFlag(BBF_INTERNAL);
+    }
+    void BuildSchemaElements(BasicBlock* block, Schema& schema) override;
+};
+
+//------------------------------------------------------------------------
+// LBRSchemaGenerator::
+//
+// Arguments:
+//   block -- block to instrument
+//   schema -- schema that we're building
+//
+void LBRSchemaGenerator::BuildSchemaElements(BasicBlock* block, Schema& schema)
+{
+    unsigned numCountersPerProbe = 1;
+
+    // Remember the schema index for this block.
+    //
+    block->bbCountSchemaIndex = (int)schema.size();
+
+    // Assign the current block's IL offset into the profile data
+    // (make sure IL offset is sane)
+    //
+    IL_OFFSET offset = block->bbCodeOffs;
+    assert((int)offset >= 0);
+
+    ICorJitInfo::PgoInstrumentationSchema schemaElem;
+    schemaElem.Count               = numCountersPerProbe;
+    schemaElem.Other               = 0;
+    schemaElem.InstrumentationKind = m_comp->opts.compCollect64BitCounts
+                                         ? ICorJitInfo::PgoInstrumentationKind::BasicBlockLongCount
+                                         : ICorJitInfo::PgoInstrumentationKind::BasicBlockIntCount;
+    schemaElem.ILOffset            = offset;
+    schemaElem.Offset              = 0;
+
+    schema.push_back(schemaElem);
+
+    m_schemaCount++;
+
+    // If this is the entry block, remember it for later.
+    // Note it might not be fgFirstBB, if we have a scratchBB.
+    //
+    if (offset == 0)
+    {
+        assert(m_entryBlock == nullptr);
+        m_entryBlock = block;
+    }
+}
+
 //------------------------------------------------------------------------
 // BlockCountInstrumentor: instrumentor that adds a counter to each
 //   non-internal imported basic block
@@ -2551,6 +2614,9 @@ PhaseStatus Compiler::fgPrepareToInstrumentMethod()
             fgCountInstrumentor     = new (this, CMK_Pgo) NonInstrumentor(this);
             fgHistogramInstrumentor = new (this, CMK_Pgo) NonInstrumentor(this);
             fgValueInstrumentor     = new (this, CMK_Pgo) NonInstrumentor(this);
+#ifdef FEATURE_LBR
+            fgLBRInstrumentor = new (this, CMK_Pgo) NonInstrumentor(this);
+#endif
             return PhaseStatus::MODIFIED_NOTHING;
         }
     }
@@ -2571,6 +2637,10 @@ PhaseStatus Compiler::fgPrepareToInstrumentMethod()
         JITDUMP("Using block profiling, because %s\n", prejit ? "prejitting" : "edge profiling disabled");
         fgCountInstrumentor = new (this, CMK_Pgo) BlockCountInstrumentor(this);
     }
+
+#ifdef FEATURE_LBR
+    fgLBRInstrumentor = new (this, CMK_Pgo) LBRSchemaGenerator(this);
+#endif
 
     // Enable class profiling by default, when jitting.
     // Todo: we may also want this on by default for prejitting.
@@ -2604,6 +2674,41 @@ PhaseStatus Compiler::fgPrepareToInstrumentMethod()
     fgCountInstrumentor->Prepare(isPreImport);
     fgHistogramInstrumentor->Prepare(isPreImport);
     fgValueInstrumentor->Prepare(isPreImport);
+
+    return PhaseStatus::MODIFIED_NOTHING;
+}
+
+PhaseStatus Compiler::fgGenSchemaForLBR()
+{
+    noway_assert(!compIsForInlining());
+
+    fgLBRInstrumentor = new (this, CMK_Pgo) LBRSchemaGenerator(this);
+
+    // Make post-import preparations.
+    //
+    const bool isPreImport = false;
+    fgLBRInstrumentor->Prepare(isPreImport);
+
+    // Walk the flow graph to build up the instrumentation schema.
+    //
+    Schema schema(getAllocator(CMK_Pgo));
+    for (BasicBlock* const block : Blocks())
+    {
+        if (fgLBRInstrumentor->ShouldProcess(block))
+        {
+            fgLBRInstrumentor->BuildSchemaElements(block, schema);
+        }
+    }
+
+    if (schema.size() == 0)
+    {
+        JITDUMP("Not instrumenting method: no schemas were created\n");
+        return PhaseStatus::MODIFIED_NOTHING;
+    }
+
+    uint8_t* profileMemory;
+    HRESULT  res = info.compCompHnd->allocPgoInstrumentationBySchema(info.compMethodHnd, schema.data(),
+                                                                     (UINT32)schema.size(), &profileMemory);
 
     return PhaseStatus::MODIFIED_NOTHING;
 }
@@ -2997,7 +3102,68 @@ bool Compiler::fgIncorporateBlockCounts()
 
     // For now assume data is always good.
     //
+#if defined(FEATURE_LBR)
+    if (CLRConfig::GetConfigValue(CLRConfig::INTERNAL_UseLBRSampling) == 0)
+    {
+        return true;
+    }
+
+    // todo-lbr
+    // place seocnd for loop, walk all success of a block, add up weights of all successors
+    // walk all succ edges, weight is successor / total
+    // setting the likihood (edge likihood)
+
+    // Transfer model edge weight onto the FlowEdges as likelihoods.
+    for (BasicBlock* const block : Blocks())
+    {
+        weight_t successorWeight = BB_ZERO_WEIGHT;
+
+        const unsigned nSucc = block->NumSucc(this);
+        if (nSucc == 0)
+        {
+            // No edges to worry about.
+            continue;
+        }
+
+        for (unsigned i = 0; i < nSucc; i++)
+        {
+            BasicBlock* const succ = block->GetSucc(i, this);
+            successorWeight += succ->getBBWeight(this);
+        }
+
+        if (successorWeight == 0)
+        {
+            // no weight to distribute, continue
+            continue;
+        }
+        if (block->getBBWeight(this) == 0)
+        {
+            block->setBBProfileWeight(successorWeight);
+        }
+
+        for (unsigned i = 0; i < nSucc; i++)
+        {
+            BasicBlock* const succ = block->GetSucc(i, this);
+            FlowEdge*         edge = block->GetSuccEdge(i, this);
+
+            weight_t likelihood = 0;
+            if (nSucc == 1)
+            {
+                likelihood = 1.0;
+            }
+            else
+            {
+                likelihood = succ->getBBWeight(this) / successorWeight;
+            }
+
+            JITDUMP("Setting likelihood of " FMT_BB " -> " FMT_BB " to " FMT_WT " (lbr)\n", block->bbNum, succ->bbNum,
+                    likelihood);
+            edge->setLikelihood(likelihood);
+        }
+    }
+
     return true;
+#endif // FEATURE_LBR
 }
 
 //------------------------------------------------------------------------

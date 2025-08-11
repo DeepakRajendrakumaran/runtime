@@ -6440,6 +6440,11 @@ protected:
 
     PhaseStatus fgPrepareToInstrumentMethod();
     PhaseStatus fgInstrumentMethod();
+#ifdef FEATURE_LBR
+    PhaseStatus fgGenSchemaForLBR();
+    Instrumentor* fgLBRInstrumentor;
+#endif
+
     PhaseStatus fgIncorporateProfileData();
     bool        fgIncorporateBlockCounts();
     bool        fgIncorporateEdgeCounts();

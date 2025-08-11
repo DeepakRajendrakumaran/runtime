@@ -501,14 +501,21 @@ RETAIL_CONFIG_DWORD_INFO_EX(EXTERNAL_ProcessorCount, W("PROCESSOR_COUNT"), 0, "S
 #ifdef FEATURE_TIERED_COMPILATION
 #ifdef _DEBUG
 // Use lower values to exercise more paths sooner
-#define TC_BackgroundWorkerTimeoutMs (100)
-#define TC_CallCountThreshold (2)
-#define TC_CallCountingDelayMs (1)
-#define TC_DelaySingleProcMultiplier (2)
+//#define TC_BackgroundWorkerTimeoutMs (100)
+//#define TC_CallCountThreshold (2)
+//#define TC_CallCountingDelayMs (1)
+//#define TC_DelaySingleProcMultiplier (2)
+
+#define TC_BackgroundWorkerTimeoutMs (4000)
+#define TC_CallCountThreshold (30)
+#define TC_CallCountingDelayMs (1000)
+#define TC_DelaySingleProcMultiplier (10)
+
+
 #else // !_DEBUG
 #define TC_BackgroundWorkerTimeoutMs (4000)
 #define TC_CallCountThreshold (30)
-#define TC_CallCountingDelayMs (100)
+#define TC_CallCountingDelayMs (1000)
 #define TC_DelaySingleProcMultiplier (10)
 #endif // _DEBUG
 RETAIL_CONFIG_DWORD_INFO(EXTERNAL_TieredCompilation, W("TieredCompilation"), 1, "Enables tiered compilation")
@@ -551,6 +558,7 @@ CONFIG_DWORD_INFO(INTERNAL_OSR_HighId, W("OSR_HighId"), 10000000, "High end of e
 RETAIL_CONFIG_STRING_INFO(INTERNAL_PGODataPath, W("PGODataPath"), "Read/Write PGO data from/to the indicated file.")
 RETAIL_CONFIG_DWORD_INFO(INTERNAL_ReadPGOData, W("ReadPGOData"), 0, "Read PGO data")
 RETAIL_CONFIG_DWORD_INFO(INTERNAL_WritePGOData, W("WritePGOData"), 0, "Write PGO data")
+RETAIL_CONFIG_DWORD_INFO(INTERNAL_AppendPGOData, W("AppendPGOData"), 0, "Append to the PGO data file.")
 RETAIL_CONFIG_DWORD_INFO(EXTERNAL_TieredPGO, W("TieredPGO"), 1, "Instrument Tier0 code and make counts available to Tier1")
 
 // TieredPGO_InstrumentOnlyHotCode values:
@@ -565,6 +573,25 @@ RETAIL_CONFIG_DWORD_INFO(UNSUPPORTED_TieredPGO_InstrumentedTierAlwaysOptimized, 
 // If scalable counters are used, set the threshold for approximate counting.
 RETAIL_CONFIG_DWORD_INFO(UNSUPPORTED_TieredPGO_ScalableCountThreshold, W("TieredPGO_ScalableCountThreshold"), 13, "Log2 threshold where counting becomes approximate")
 
+#endif
+
+///
+/// LBR Opts
+///
+#ifdef FEATURE_LBR
+RETAIL_CONFIG_STRING_INFO(INTERNAL_LBRDataPath, W("LBRDataPath"), "Write LBR data to the indicated file.")
+RETAIL_CONFIG_DWORD_INFO(INTERNAL_WriteLBRData, W("WriteLBRData"), 0, "Write LBR data.")
+RETAIL_CONFIG_DWORD_INFO(INTERNAL_AppendLBRData, W("AppendLBRData"), 0, "Append to the LBR data file.")
+
+RETAIL_CONFIG_DWORD_INFO(INTERNAL_LBRSamplingFreq, W("LBRSamplingFreq"), 1000000, "Sampling frequency for LBR events.")
+RETAIL_CONFIG_DWORD_INFO(INTERNAL_UseLBRSampling, W("UseLBRSampling"), 0, "Start LBR sampling.")
+
+RETAIL_CONFIG_DWORD_INFO(INTERNAL_HaltLBRSamplingAfterCompile, W("HaltLBRSamplingAfterCompile"), 0, "Stop LBR sampling after first compilation for a method")
+
+
+RETAIL_CONFIG_STRING_INFO(INTERNAL_LBRDump, W("LBRDump"), "Dump LBR data for a method.")
+
+RETAIL_CONFIG_STRING_INFO(INTERNAL_PGODump, W("PGODump"), "Dump PGO data for a method.")
 #endif
 
 ///

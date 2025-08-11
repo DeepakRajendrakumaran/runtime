@@ -567,6 +567,9 @@ bool CallCountingManager::SetCodeEntryPoint(
     _ASSERTE(!wasMethodCalled || createTieringBackgroundWorkerRef != nullptr);
     _ASSERTE(createTieringBackgroundWorkerRef == nullptr || !*createTieringBackgroundWorkerRef);
 
+    LOG((LF_TIEREDCOMPILATION, LL_INFO10000, "CallCounting SetEntryPoint Method=0x%pM (%s::%s), inspecting\n",
+            methodDesc, methodDesc->m_pszDebugClassName, methodDesc->m_pszDebugMethodName));
+
     if (!methodDesc->IsEligibleForTieredCompilation() ||
         (
             // For a default code version that is not tier 0, call counting will have been disabled by this time (checked
@@ -587,9 +590,11 @@ bool CallCountingManager::SetCodeEntryPoint(
     CallCountingInfo *callCountingInfo = callCountingInfoByCodeVersionHash.Lookup(activeCodeVersion);
     do
     {
+
         if (callCountingInfo != nullptr)
         {
             _ASSERTE(callCountingInfo->GetCodeVersion() == activeCodeVersion);
+
 
             CallCountingInfo::Stage callCountingStage = callCountingInfo->GetStage();
             if (callCountingStage >= CallCountingInfo::Stage::PendingCompletion)
@@ -861,12 +866,15 @@ void CallCountingManager::CompleteCallCounting()
 
     _ASSERTE(GetThreadNULLOk() == TieredCompilationManager::GetBackgroundWorkerThread());
 
+
     AppDomain *appDomain = GetAppDomain();
     TieredCompilationManager *tieredCompilationManager = appDomain->GetTieredCompilationManager();
     CodeVersionManager *codeVersionManager = appDomain->GetCodeVersionManager();
 
     MethodDescBackpatchInfoTracker::ConditionalLockHolder slotBackpatchLockHolder;
     CodeVersionManager::LockHolder codeVersioningLockHolder;
+
+
 
     for (auto itEnd = s_callCountingManagers->End(), it = s_callCountingManagers->Begin(); it != itEnd; ++it)
     {
@@ -891,6 +899,10 @@ void CallCountingManager::CompleteCallCounting()
 
             NativeCodeVersion codeVersion = callCountingInfo->GetCodeVersion();
             MethodDesc *methodDesc = codeVersion.GetMethodDesc();
+
+            LOG((LF_TIEREDCOMPILATION, LL_INFO10000, "CallCounting CompleteCallCounting Method=0x%pM (%s::%s), inspecting\n",
+                    methodDesc, methodDesc->m_pszDebugClassName, methodDesc->m_pszDebugMethodName));
+
             _ASSERTE(codeVersionManager == methodDesc->GetCodeVersionManager());
             EX_TRY
             {
@@ -1050,6 +1062,11 @@ void CallCountingManager::StopAllCallCounting(TieredCompilationManager *tieredCo
             }
 
             NativeCodeVersion codeVersion = callCountingInfo->GetCodeVersion();
+            MethodDesc* methodDesc = codeVersion.GetMethodDesc();
+
+            LOG((LF_TIEREDCOMPILATION, LL_INFO10000, "CallCounting StopAllCallCounting Method=0x%pM (%s::%s), inspecting\n",
+                    methodDesc, methodDesc->m_pszDebugClassName, methodDesc->m_pszDebugMethodName));
+
             CallCountingInfo::Stage newCallCountingStage;
             if (callCountingStage == CallCountingInfo::Stage::StubMayBeActive)
             {

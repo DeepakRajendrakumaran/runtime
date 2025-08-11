@@ -4420,6 +4420,17 @@ void Compiler::compCompile(void** methodCodePtr, uint32_t* methodCodeSize, JitFl
         DoPhase(this, PHASE_IBCINSTR, &Compiler::fgInstrumentMethod);
     }
 
+#ifdef FEATURE_LBR
+    if (!compIsForInlining())
+    {
+        if (CLRConfig::GetConfigValue(CLRConfig::INTERNAL_UseLBRSampling) != 0 &&
+            compileFlags->IsSet(JitFlags::JIT_FLAG_TIER0))
+        {
+            DoPhase(this, PHASE_IBCINSTR, &Compiler::fgGenSchemaForLBR);
+        }
+    }
+#endif
+
     // Expand any patchpoints
     //
     DoPhase(this, PHASE_PATCHPOINTS, &Compiler::fgTransformPatchpoints);
@@ -7105,6 +7116,10 @@ int Compiler::compCompileHelper(CORINFO_MODULE_HANDLE classPtr,
 
             if (canEscapeViaOSR)
             {
+#ifdef DEBUG
+                printf("TRACE-COMPILE :: MethodName:%s.%s OSR:True\n", info.compClassName, info.compMethodName);
+#endif
+
                 JITDUMP("\nOSR enabled for this method\n");
                 if (compHasBackwardJump && !compTailPrefixSeen &&
                     opts.jitFlags->IsSet(JitFlags::JIT_FLAG_BBINSTR_IF_LOOPS) && opts.IsTier0())

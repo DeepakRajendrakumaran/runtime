@@ -161,6 +161,7 @@
 #include "disassembler.h"
 #include "jithost.h"
 #include "pgo.h"
+#include "lbr.h"
 #include "pendingload.h"
 #include "cdacplatformmetadata.hpp"
 
@@ -741,6 +742,11 @@ void EEStartupHelper()
         PgoManager::Initialize();
 #endif
 
+#ifdef FEATURE_LBR
+        if (CLRConfig::GetConfigValue(CLRConfig::INTERNAL_UseLBRSampling) != 0)
+            LbrManager::Initialize();
+#endif
+
         STRESS_LOG0(LF_STARTUP, LL_ALWAYS, "===================EEStartup Starting===================");
 
 #ifndef TARGET_UNIX
@@ -1151,6 +1157,17 @@ void STDMETHODCALLTYPE EEShutDownHelper(BOOL fIsDllUnloading)
     EX_TRY
     {
         PgoManager::Shutdown();
+    }
+    EX_CATCH
+    {
+    }
+    EX_END_CATCH(SwallowAllExceptions);
+#endif
+
+#ifdef FEATURE_LBR
+    EX_TRY
+    {
+        LbrManager::Shutdown();
     }
     EX_CATCH
     {

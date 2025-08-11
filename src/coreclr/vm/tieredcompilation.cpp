@@ -13,6 +13,8 @@
 #include "threadsuspend.h"
 #include "tieredcompilation.h"
 
+#include "lbr.h"
+
 // TieredCompilationManager determines which methods should be recompiled and
 // how they should be recompiled to best optimize the running code. It then
 // handles logistics of getting new code created and installed.
@@ -92,6 +94,7 @@ NativeCodeVersion::OptimizationTier TieredCompilationManager::GetInitialOptimiza
     _ASSERTE(pMethodDesc != NULL);
 
 #ifdef FEATURE_TIERED_COMPILATION
+
     if (!pMethodDesc->IsEligibleForTieredCompilation())
     {
         // The optimization tier is not used
@@ -144,6 +147,9 @@ void TieredCompilationManager::HandleCallCountingForFirstCall(MethodDesc* pMetho
     _ASSERTE(pMethodDesc != nullptr);
     _ASSERTE(pMethodDesc->IsEligibleForTieredCompilation());
     _ASSERTE(g_pConfig->TieredCompilation_CallCountingDelayMs() != 0);
+
+    LOG((LF_TIEREDCOMPILATION, LL_INFO10000, "TieredCompilationManager::HandleCallCountingForFirstCall Method=0x%pM (%s::%s)\n",
+        pMethodDesc, pMethodDesc->m_pszDebugClassName, pMethodDesc->m_pszDebugMethodName));
 
     // An exception here (OOM) would mean that the method's calls would not be counted and it would not be promoted. A
     // consideration is that an attempt can be made to reset the code entry point on exception (which can also OOM). Doesn't
@@ -227,6 +233,11 @@ bool TieredCompilationManager::TrySetCodeEntryPointAndRecordMethodForCallCountin
     _ASSERTE(pMethodDesc->IsEligibleForTieredCompilation());
     _ASSERTE(codeEntryPoint != (PCODE)NULL);
 
+
+    LOG((LF_TIEREDCOMPILATION, LL_INFO10000, "TieredCompilationManager::TrySetCodeEntryPointAndRecordMethodForCallCounting Method=0x%pM (%s::%s)\n",
+        pMethodDesc, pMethodDesc->m_pszDebugClassName, pMethodDesc->m_pszDebugMethodName));
+
+
     if (!IsTieringDelayActive())
     {
         return false;
@@ -275,6 +286,10 @@ void TieredCompilationManager::AsyncPromoteToTier1(
     // occur between now and when jitting completes. If the IL does change in that
     // interval the new code entry won't be activated.
     MethodDesc *pMethodDesc = currentNativeCodeVersion.GetMethodDesc();
+
+    LOG((LF_TIEREDCOMPILATION, LL_INFO10000, "TieredCompilationManager::AsyncPromoteToTier1 Beginning Method=0x%pM (%s::%s), inspecting\n",
+            pMethodDesc, pMethodDesc->m_pszDebugClassName, pMethodDesc->m_pszDebugMethodName));
+
 
     NativeCodeVersion::OptimizationTier nextTier = NativeCodeVersion::OptimizationTier1;
 
@@ -516,6 +531,7 @@ void TieredCompilationManager::BackgroundWorkerStart()
         {
             do
             {
+                LOG((LF_TIEREDCOMPILATION, LL_INFO10000, "Waiting on Tier Delay\n"));
                 ClrSleepEx(delayMs, false);
             } while (!TryDeactivateTieringDelay());
         }
@@ -604,6 +620,7 @@ bool TieredCompilationManager::TryDeactivateTieringDelay()
         if (m_tier1CallCountingCandidateMethodRecentlyRecorded)
         {
             m_tier1CallCountingCandidateMethodRecentlyRecorded = false;
+            LOG((LF_TIEREDCOMPILATION, LL_INFO10000, "TieredCompilationManager::TryDeactivateTieringDelay: Tier 1 call counting candidate method was recently recorded\n"));
             return false;
         }
 
@@ -616,6 +633,7 @@ bool TieredCompilationManager::TryDeactivateTieringDelay()
         countOfNewMethodsCalledDuringDelay = m_countOfNewMethodsCalledDuringDelay;
         m_countOfNewMethodsCalledDuringDelay = 0;
 
+        LOG((LF_TIEREDCOMPILATION, LL_INFO10000, "TieredCompilationManager Disabling Tier Delay\n"));
         _ASSERTE(!IsTieringDelayActive());
     }
 
@@ -817,6 +835,14 @@ bool TieredCompilationManager::DoBackgroundWork(
             continue;
         }
 
+        {
+            MethodDesc *pMethodDesc = nativeCodeVersionToOptimize.GetMethodDesc();
+            _ASSERTE(pMethodDesc != nullptr);
+            LOG((LF_TIEREDCOMPILATION, LL_INFO10000, "TieredCompilationManager::DoBackgroundWork Method=0x%pM (%s::%s) forwarded to OptimizeMethod\n",
+                pMethodDesc, pMethodDesc->m_pszDebugClassName, pMethodDesc->m_pszDebugMethodName));
+        }
+
+
         OptimizeMethod(nativeCodeVersionToOptimize);
         ++jittedMethodCount;
 
@@ -951,6 +977,14 @@ BOOL TieredCompilationManager::CompileCodeVersion(NativeCodeVersion nativeCodeVe
         PrepareCodeConfigBuffer configBuffer(nativeCodeVersion);
         PrepareCodeConfig *config = configBuffer.GetConfig();
 
+#ifdef FEATURE_LBR
+        if (CLRConfig::GetConfigValue(CLRConfig::INTERNAL_UseLBRSampling) != 0)
+        {
+            bool haltSampleCollection = CLRConfig::GetConfigValue(CLRConfig::INTERNAL_HaltLBRSamplingAfterCompile) == 1;
+            LbrManager::BuildPGOSchema(pMethod, haltSampleCollection);
+        }
+#endif
+
         // This is a recompiling request which means the caller was
         // in COOP mode since the code already ran.
         _ASSERTE(!pMethod->HasUnmanagedCallersOnlyAttribute());
@@ -982,6 +1016,23 @@ BOOL TieredCompilationManager::CompileCodeVersion(NativeCodeVersion nativeCodeVe
     return pCode != (PCODE)NULL;
 }
 
+static const char* GetNameForOptimizationTier(NativeCodeVersion::OptimizationTier optimizationTier)
+{
+    switch (optimizationTier)
+    {
+        case NativeCodeVersion::OptimizationTier0:
+            return "OptimizationTier0";
+        case NativeCodeVersion::OptimizationTier0Instrumented:
+            return "OptimizationTier0Instrumented";
+        case NativeCodeVersion::OptimizationTier1:
+            return "OptimizationTier1";
+        case NativeCodeVersion::OptimizationTierOptimized:
+            return "OptimizationTierOptimized";
+        default:
+            return "Unknown";
+    }
+}
+
 // Updates the MethodDesc and precode so that future invocations of a method will
 // execute the native code pointed to by pCode.
 // Called on a background thread.
@@ -1005,6 +1056,16 @@ void TieredCompilationManager::ActivateCodeVersion(NativeCodeVersion nativeCodeV
         // methods this first attempt should succeed
         ilParent = nativeCodeVersion.GetILCodeVersion();
         hr = ilParent.SetActiveNativeCodeVersion(nativeCodeVersion);
+
+        SString tClass, tMethodName, tMethodSignature;
+        pMethod->GetMethodInfo(tClass, tMethodName, tMethodSignature);
+
+        NativeCodeVersion::OptimizationTier optimizationTier = nativeCodeVersion.GetOptimizationTier();
+        fprintf(stdout, "TRACE-COMPILE :: MethodName:%s.%s OptimizationTier:%s\n",
+            tClass.GetUTF8(), tMethodName.GetUTF8(), GetNameForOptimizationTier(optimizationTier));
+        fflush(stdout);
+
+
         LOG((LF_TIEREDCOMPILATION, LL_INFO10000, "TieredCompilationManager::ActivateCodeVersion Method=0x%pM (%s::%s), code version id=0x%x. SetActiveNativeCodeVersion ret=0x%x\n",
             pMethod, pMethod->m_pszDebugClassName, pMethod->m_pszDebugMethodName,
             nativeCodeVersion.GetVersionId(),

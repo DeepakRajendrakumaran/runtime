@@ -39,6 +39,8 @@ public:
     // Verify address in bounds
     static void VerifyAddress(void* address);
 
+    static bool savePgoInstrumentation(MethodDesc *pMD, ICorJitInfo::PgoInstrumentationSchema* ppSchema, UINT32 pCountSchemaItems, BYTE* pInstrumentationData);
+
 #ifdef FEATURE_PGO
     PgoManager()
     {
@@ -154,6 +156,9 @@ protected:
                                                     ICorJitInfo::PgoInstrumentationSchema* pSchema,
                                                     UINT32 countSchemaItems,
                                                     BYTE** pInstrumentationData);
+
+
+    bool savePgoInstrumentationInstance(MethodDesc *pMD, ICorJitInfo::PgoInstrumentationSchema* ppSchema, UINT32 pCountSchemaItems, BYTE* pInstrumentationData);
 
 private:
     static HRESULT ComputeOffsetOfActualInstrumentationData(const ICorJitInfo::PgoInstrumentationSchema* pSchema, UINT32 countSchemaItems, size_t headerInitialSize, UINT *offsetOfActualInstrumentationData);

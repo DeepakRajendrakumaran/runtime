@@ -8,7 +8,14 @@
 #include "typestring.h"
 #include "pgo_formatprocessing.h"
 
+
 #ifdef FEATURE_PGO
+
+#if defined(HOST_WINDOWS) && !defined(FEATURE_NATIVEAOT)
+#include <io.h>
+#endif
+
+
 
 // Data structure for holding pgo data
 // Need to be walkable at process shutdown without taking meaningful locks
@@ -155,13 +162,33 @@ public:
 
 void CallFClose(FILE* file)
 {
+#if defined(HOST_WINDOWS) && !defined(FEATURE_NATIVEAOT)
+    int fd = _fileno(file);
+    HANDLE h = (HANDLE)_get_osfhandle(fd);
+    FlushFileBuffers(h);    // Flush to disk
+#endif
     fclose(file);
 }
 
 typedef Holder<FILE*, DoNothing, CallFClose> FILEHolder;
 
+static LPUTF8 NarrowWideChar(__inout_z LPCWSTR str)
+{
+    if (str != 0) {
+        LPCWSTR fromPtr = str;
+        LPUTF8 toPtr = (LPUTF8) str;
+        LPUTF8 result = toPtr;
+        while(*fromPtr != 0)
+            *toPtr++ = (char) *fromPtr++;
+        *toPtr = 0;
+        return result;
+    }
+    return NULL;
+}
+
 void PgoManager::WritePgoData()
 {
+
     if (ETW_EVENT_ENABLED(MICROSOFT_WINDOWS_DOTNETRUNTIME_PROVIDER_DOTNET_Context, JitInstrumentationDataVerbose))
     {
         EnumeratePGOHeaders([](HeaderList *pgoData)
@@ -205,7 +232,8 @@ void PgoManager::WritePgoData()
         return;
     }
 
-    FILE* const pgoDataFile = _wfopen(fileName, W("wb"));
+    const wchar_t *writeFlags = CLRConfig::GetConfigValue(CLRConfig::INTERNAL_AppendPGOData) == 1 ? W("ab") : W("wb");
+    FILE* const pgoDataFile = _wfopen(fileName, writeFlags);
 
     if (pgoDataFile == NULL)
     {
@@ -216,12 +244,34 @@ void PgoManager::WritePgoData()
 
     fprintf(pgoDataFile, s_FileHeaderString, pgoDataCount);
 
-    EnumeratePGOHeaders([pgoDataFile](HeaderList *pgoData)
+    LPUTF8 pgoDebugMethod;
+    CLRConfig::GetConfigValue(CLRConfig::INTERNAL_PGODump, (LPWSTR*)&pgoDebugMethod);
+    pgoDebugMethod = NarrowWideChar((LPWSTR)pgoDebugMethod);
+
+    EnumeratePGOHeaders([pgoDataFile, pgoDebugMethod](HeaderList *pgoData)
     {
+
+        {
+            SString tClass, tMethodName, tMethodSignature;
+            pgoData->header.method->GetMethodInfo(tClass, tMethodName, tMethodSignature);
+            if (pgoDebugMethod && strcmp((const char *)pgoDebugMethod, tMethodName.GetUTF8()) == 0)
+            {
+                printf("INFO: found PGO data for %s::%s\n", tClass.GetUTF8(), tMethodName.GetUTF8());
+            }
+        }
+
         int32_t schemaItems;
         if (!CountInstrumentationDataSize(pgoData->header.GetData(), pgoData->header.SchemaSizeMax(), &schemaItems))
         {
-            _ASSERTE(!"Invalid instrumentation schema");
+            {
+                SString tClass, tMethodName, tMethodSignature;
+                pgoData->header.method->GetMethodInfo(tClass, tMethodName, tMethodSignature);
+                if (pgoDebugMethod && strcmp((const char *)pgoDebugMethod, tMethodName.GetUTF8()) == 0)
+                {
+                    printf("cannot count: data for %s::%s\n", tClass.GetUTF8(), tMethodName.GetUTF8());
+                }
+            }
+
             return true;
         }
 
@@ -323,6 +373,15 @@ void PgoManager::WritePgoData()
         if (!ReadInstrumentationSchemaWithLayout(pgoData->header.GetData(), pgoData->header.SchemaSizeMax(), pgoData->header.countsOffset, lambda))
         {
             return true;;
+        }
+
+        {
+            SString tClass, tMethodName, tMethodSignature;
+            pgoData->header.method->GetMethodInfo(tClass, tMethodName, tMethodSignature);
+            if (pgoDebugMethod && strcmp((const char *)pgoDebugMethod, tMethodName.GetUTF8()) == 0)
+            {
+                printf("INFO: wrote data for %s::%s\n", tClass.GetUTF8(), tMethodName.GetUTF8());
+            }
         }
 
         return true;
@@ -1125,6 +1184,57 @@ HRESULT PgoManager::getPgoInstrumentationResultsFromR2RFormat(ReadyToRunInfo *pR
     }
 }
 #endif // DACCESS_COMPILE
+
+bool PgoManager::savePgoInstrumentation(MethodDesc *pMD, ICorJitInfo::PgoInstrumentationSchema* ppSchema, UINT32 pCountSchemaItems, BYTE*pInstrumentationData)
+{
+    PgoManager *mgr = nullptr;
+    if (!pMD->IsDynamicMethod())
+    {
+        mgr = pMD->GetLoaderAllocator()->GetPgoManager();
+    }
+    else
+    {
+        mgr = pMD->AsDynamicMethodDesc()->GetResolver()->GetDynamicPgoManager();
+    }
+    if (mgr == nullptr)
+        return false;
+
+    return mgr->savePgoInstrumentationInstance(pMD, ppSchema, pCountSchemaItems, pInstrumentationData);
+}
+
+
+bool PgoManager::savePgoInstrumentationInstance(MethodDesc *pMD, ICorJitInfo::PgoInstrumentationSchema* ppSchema, UINT32 pCountSchemaItems, BYTE*pInstrumentationData)
+{
+    HeaderList *found;
+    LoaderAllocatorPgoManager *laPgoManagerThis = (LoaderAllocatorPgoManager *)this;
+
+    CrstHolder lock(&laPgoManagerThis->m_lock);
+    found = laPgoManagerThis->m_pgoDataLookup.Lookup(pMD);
+    if (!found)
+        return false;
+
+    size_t instrumentationDataSize = 0;
+    if (pCountSchemaItems > 0)
+    {
+        auto lastSchema = ppSchema[pCountSchemaItems - 1];
+        instrumentationDataSize = AlignUp(lastSchema.Offset + lastSchema.Count * InstrumentationKindToSize(lastSchema.InstrumentationKind), sizeof(size_t));
+    }
+    else
+    {
+        return false;
+    }
+
+    volatile size_t*pDest = (volatile size_t*)(found->header.GetData() + found->header.countsOffset);
+    size_t *pInstrSrc = (size_t*) pInstrumentationData;
+    size_t *pInstrSrcEnd = (size_t*) (pInstrumentationData + instrumentationDataSize);
+
+    for (;pInstrSrc < pInstrSrcEnd; pInstrSrc++, pDest++)
+    {
+        *pDest = *pInstrSrc;
+    }
+
+    return true;
+}
 
 HRESULT PgoManager::getPgoInstrumentationResultsInstance(MethodDesc* pMD, BYTE** pAllocatedData, ICorJitInfo::PgoInstrumentationSchema** ppSchema, UINT32 *pCountSchemaItems, BYTE**pInstrumentationData, ICorJitInfo::PgoSource* pPgoSource)
 {

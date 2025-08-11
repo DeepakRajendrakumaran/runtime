@@ -532,3 +532,7 @@ End
 
 Crst InterfaceDispatchGlobalLists
 End
+
+Crst LbrData
+    AcquiredBefore PgoData
+End

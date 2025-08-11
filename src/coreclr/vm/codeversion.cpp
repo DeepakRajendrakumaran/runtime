@@ -25,6 +25,8 @@
 // versioning information
 //
 
+
+
 NativeCodeVersion::NativeCodeVersion(PTR_MethodDesc pMethod) : m_pMethodDesc(pMethod) {}
 BOOL NativeCodeVersion::IsDefaultVersion() const { return TRUE; }
 PCODE NativeCodeVersion::GetNativeCode() const { return m_pMethodDesc->GetNativeCode(); }
@@ -52,6 +54,24 @@ void NativeCodeVersion::SetGCCoverageInfo(PTR_GCCoverageInfo gcCover)
 static ReJITID s_GlobalReJitId = 1;
 
 #ifndef DACCESS_COMPILE
+
+static const char* GetNameForOptimizationTier(NativeCodeVersion::OptimizationTier optimizationTier)
+{
+    switch (optimizationTier)
+    {
+        case NativeCodeVersion::OptimizationTier0:
+            return "OptimizationTier0";
+        case NativeCodeVersion::OptimizationTier0Instrumented:
+            return "OptimizationTier0Instrumented";
+        case NativeCodeVersion::OptimizationTier1:
+            return "OptimizationTier1";
+        case NativeCodeVersion::OptimizationTierOptimized:
+            return "OptimizationTierOptimized";
+        default:
+            return "Unknown";
+    }
+}
+
 NativeCodeVersionNode::NativeCodeVersionNode(
     NativeCodeVersionId id,
     MethodDesc* pMethodDesc,
@@ -1020,6 +1040,12 @@ HRESULT ILCodeVersion::GetOrCreateActiveNativeCodeVersion(MethodDesc* pClosedMet
     {
         NativeCodeVersion::OptimizationTier optimizationTier =
             TieredCompilationManager::GetInitialOptimizationTier(pClosedMethodDesc);
+
+        SString tClass, tMethodName, tMethodSignature;
+        pClosedMethodDesc->GetMethodInfo(tClass, tMethodName, tMethodSignature);
+        fprintf(stdout, "TRACE-COMPILE(Initial) :: MethodName:%s.%s OptimizationTier:%s\n",
+            tClass.GetUTF8(), tMethodName.GetUTF8(), GetNameForOptimizationTier(optimizationTier));
+
         if (FAILED(hr = AddNativeCodeVersion(pClosedMethodDesc, optimizationTier, &activeNativeChild)))
         {
             _ASSERTE(hr == E_OUTOFMEMORY);

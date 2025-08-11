@@ -99,6 +99,7 @@ set(VM_SOURCES_DAC_AND_WKS_COMMON
     instmethhash.cpp
     jithost.cpp
     jitinterface.cpp
+    lbr.cpp
     loaderallocator.cpp
     memberload.cpp
     method.cpp
@@ -194,6 +195,7 @@ set(VM_HEADERS_DAC_AND_WKS_COMMON
     instmethhash.h
     jithost.h
     jitinterface.h
+    lbr.h
     loaderallocator.hpp
     loaderallocator.inl
     memberload.h
